@@ -1,0 +1,1 @@
+[![Build Status](https://travis-ci.org/NoBugs-DMD/HotelManagementSystemBackend.svg?branch=master)](https://travis-ci.org/NoBugs-DMD/HotelManagementSystemBackend)
