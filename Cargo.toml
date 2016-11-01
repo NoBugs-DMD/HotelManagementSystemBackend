@@ -1,0 +1,6 @@
+[package]
+name = "hms_api"
+version = "0.1.0"
+authors = ["Mike Lubinets <lubinetsm@yandex.ru>"]
+
+[dependencies]
