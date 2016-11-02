@@ -19,14 +19,14 @@ fn main() {
         // Specify API version
         api.prefix("api");
 
-        account_api.post("signin", |endpoint| {
+        api.post("signin", |endpoint| {
             endpoint.desc("Login user by login-password pair");
             endpoint.handle(|client, params| {
                 unimplemented!()
             })
         })
 
-        account_api.post("signup", |endpoint| {
+        api.post("signup", |endpoint| {
             endpoint.desc("Sign-up user with provided info");
             endpoint.handle(|client, params| {
                 unimplemented!()
