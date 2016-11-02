@@ -24,14 +24,14 @@ fn main() {
             endpoint.handle(|client, params| {
                 unimplemented!()
             })
-        })
+        });
 
         api.post("signup", |endpoint| {
             endpoint.desc("Sign-up user with provided info");
             endpoint.handle(|client, params| {
                 unimplemented!()
             })
-        })
+        });
     });
 
     let app = Application::new(api);
