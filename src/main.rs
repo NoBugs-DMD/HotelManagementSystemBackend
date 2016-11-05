@@ -1,8 +1,8 @@
  #![feature(box_syntax)]
 
-//extern crate postgres;
-//extern crate r2d2;
-//extern crate r2d2_postgres;
+extern crate postgres;
+extern crate r2d2;
+extern crate r2d2_postgres;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate router;
 extern crate hyper;
@@ -50,20 +50,14 @@ fn signin_handler(req: &mut Request) -> IronResult<Response> {
 
     let signin_data: SigninData = match json::decode(&buffer) {
         Ok(sd) => sd,
-        Err(json_err) => {
-            let api_response: ApiResponse<_> = InvalidSchemaError::from(json_err).into();
-            return api_response.into()
-        }
+        Err(json_err) => return ApiResponse::into(InvalidSchemaError::into(json_err.into()))
     };
 
     println!("Signin request {:?}", signin_data);
     
     let token = match Authorizer::signin(&signin_data) {
         Ok(token) => token,
-        Err(err) => {
-            let api_response: ApiResponse<_> = err.into();
-            return api_response.into()
-        }
+        Err(err) => return ApiResponse::into(err.into())
     };
 
     let mut response = Response::with(StatusCode::Ok);
@@ -78,20 +72,14 @@ fn signup_handler(req: &mut Request) -> IronResult<Response> {
 
     let signup_data: SignupData = match json::decode(&buffer) {
         Ok(sd) => sd,
-        Err(json_err) => {
-            let api_response: ApiResponse<_> = InvalidSchemaError::from(json_err).into();
-            return api_response.into()
-        }
+        Err(json_err) => return ApiResponse::into(InvalidSchemaError::into(json_err.into()))
     };
 
     println!("Signup request: {:?}", signup_data);
     
     let token = match Authorizer::signup(&signup_data) {
         Ok(token) => token,
-        Err(err) => {
-            let api_response: ApiResponse<_> = err.into();
-            return api_response.into()
-        }
+        Err(err) => return ApiResponse::into(err.into())
     };
 
     let mut response = Response::with(StatusCode::Ok);
