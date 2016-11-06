@@ -40,20 +40,6 @@ impl<D> Into<IronResult<Response>> for ApiResponse<D>
 }
 
 #[macro_export]
-macro_rules! api_error_into_api_response {
-    ($ty:ty) => {
-        impl Into<::response::ApiResponse<()>> for $ty {
-            fn into(self) -> ::response::ApiResponse<()> {
-                ::response::ApiResponse::Err (
-                    <Self as ::error::ApiError>::code(),
-                    self.description,
-                )
-            }
-        }
-    }
-}
-
-#[macro_export]
 macro_rules! data_into_api_response {
     ($ty:ty) => {
         impl Into<::response::ApiResponse<$ty>> for $ty {

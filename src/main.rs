@@ -20,14 +20,14 @@ use rustc_serialize::json;
 use hyper::status::StatusCode; 
 use std::io::{Read, Write};
 
-#[macro_use] mod response;
-#[macro_use] mod error;
-mod schema;
+#[macro_use]
+mod proto;
+mod db;
 mod authorization;
 
-use response::*;
-use error::*;
-use schema::*;
+use proto::response::*;
+use proto::error::*;
+use proto::schema::*;
 use authorization::*;
 
 fn main() {
@@ -50,14 +50,14 @@ fn signin_handler(req: &mut Request) -> IronResult<Response> {
 
     let signin_data: SigninData = match json::decode(&buffer) {
         Ok(sd) => sd,
-        Err(json_err) => return ApiResponse::into(InvalidSchemaError::into(json_err.into()))
+        Err(json_err) => return InvalidSchemaError::from(json_err).into_api_response().into()
     };
 
     println!("Signin request {:?}", signin_data);
     
     let token = match Authorizer::signin(&signin_data) {
         Ok(token) => token,
-        Err(err) => return ApiResponse::into(err.into())
+        Err(err) => return err.into_api_response().into()
     };
 
     let mut response = Response::with(StatusCode::Ok);
@@ -72,14 +72,14 @@ fn signup_handler(req: &mut Request) -> IronResult<Response> {
 
     let signup_data: SignupData = match json::decode(&buffer) {
         Ok(sd) => sd,
-        Err(json_err) => return ApiResponse::into(InvalidSchemaError::into(json_err.into()))
+        Err(json_err) => return InvalidSchemaError::from(json_err).into_api_response().into()
     };
 
     println!("Signup request: {:?}", signup_data);
     
     let token = match Authorizer::signup(&signup_data) {
         Ok(token) => token,
-        Err(err) => return ApiResponse::into(err.into())
+        Err(err) => return err.into_api_response().into()
     };
 
     let mut response = Response::with(StatusCode::Ok);

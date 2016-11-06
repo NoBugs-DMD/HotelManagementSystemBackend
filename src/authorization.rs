@@ -2,22 +2,22 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use std::sync::Arc;
 
-use ::schema::*;
+use ::proto::schema::*;
+use ::proto::error::*;
 
 pub type Token = String;
-pub type SigninResult<'tmap> = Result<&'tmap Token, SigninError>; 
-pub type SignupResult<'tmap> = Result<&'tmap Token, SignupError>;
 
 new_api_error!(SigninError);
 new_api_error!(SignupError);
+new_api_error!(NotAuthorizedError);
 
 pub struct Authorizer;
 impl Authorizer {
-    pub fn signin(signin_data: &SigninData) -> SigninResult<'static> {
+    pub fn signin(signin_data: &SigninData) -> ApiResult<&'static Token> {
         unimplemented!()
     }
 
-    pub fn signup(signup_data: &SignupData) -> SignupResult<'static> {
+    pub fn signup(signup_data: &SignupData) -> ApiResult<&'static Token> {
         unimplemented!()
     }
 }

@@ -10,6 +10,7 @@ pub enum ErrorCode {
     InvalidSchemaError,
     SigninError,
     SignupError,
+    NotAuthorizedError,
 }
 
 impl Into<i32> for ErrorCode {
@@ -18,19 +19,26 @@ impl Into<i32> for ErrorCode {
     }
 }
 
-use ::response::*;
-pub trait ApiError: Error + Encodable + Into<ApiResponse<()>> {
-    fn code() -> i32;
+pub type ApiResult<D> = Result<D, Box<ApiError>>;
+
+use super::response::*;
+pub trait ApiError {
+    fn code(&self) -> i32;
+    fn description(&self) -> String;
+    fn into_api_response(&self) -> ApiResponse<()>{
+        ApiResponse::Err(
+            self.code(),
+            self.description()
+        )
+    }
 }
 
 macro_rules! new_api_error {
     ($ident:ident) => {
-        #[derive(Debug, Clone, RustcEncodable)]
+        #[derive(Debug, Clone)]
         pub struct $ident {
             description: String,
         }
-
-        api_error_into_api_response!($ident);
 
         impl ::std::fmt::Display for $ident {
             fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
@@ -38,15 +46,13 @@ macro_rules! new_api_error {
             }
         }
 
-        impl ::error::ApiError for $ident {
-            fn code() -> i32 {
-                ::error::ErrorCode::$ident as i32
+        impl ::proto::error::ApiError for $ident {
+            fn code(&self) -> i32 {
+                ::proto::error::ErrorCode::$ident as i32
             }
-        }
 
-        impl ::std::error::Error for $ident {
-            fn description(&self) -> &str {
-                &self.description
+            fn description(&self) -> String {
+                self.description.clone()
             }
         }
 
