@@ -1,0 +1,53 @@
+intex.html:
+GET cities
+GET top_picks
+
+account:
+GET my_bookings/N?offset=O
+GET my_info { ... , permissions }
+PUT my_info
+
+bookings:
+GET by_id
+PUT(new)  { ... } 
+POST(update) { ... } 
+
+search_api:
+POST { city, arrival, departure, rating, stars, price, hotel_id }
+
+hotels:
+GET by_id/
+PUT { ... }
+POST { ... }
+GET by_id/room/by_id
+PUT by_id/room { ... }
+POST by_id/room { ... }
+GET by_id/rooms/N?offset=O
+GET by_id/reviews/N?offset=O
+GET by_id/employee/N?offset=O
+PUT by_id/employee/ { ... }
+DEL by_id/employee/id { ... }
+GET by_id/ruleset/
+POST by_id/ruleset/ { ... }
+
+owner:
+GET hotels/N?offset=O
+
+manager:
+GET rulesets/
+GET ruleset/by_id
+PUT ruleset/ { ... }
+POST ruleset/by_id
+DEL ruleset/by_id
+
+photo:
+GET photoset/id
+PUT photoset/
+POST photoset/id
+GET photo/id
+PUT photo/id
+
+cleaning:
+GET todo/
+PUT todo/ { ... }
+POST todo/by_id { ... }
