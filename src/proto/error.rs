@@ -1,9 +1,3 @@
-use rustc_serialize::json::DecoderError;
-use rustc_serialize::{Encodable, Decodable};
-use std::convert::From;
-use std::error::Error;
-use std::fmt;
-
 #[derive(Debug)]
 pub enum ErrorCode {
     OK = 0,

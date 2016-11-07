@@ -1,4 +1,7 @@
- #![feature(box_syntax)]
+#![feature(box_syntax)]
+#![feature(trace_macros)]
+#![feature(inclusive_range_syntax)]
+#![feature(log_syntax)]
 
 extern crate postgres;
 extern crate r2d2;
@@ -10,25 +13,24 @@ extern crate iron;
 extern crate cookie;
 extern crate oven;
 extern crate rustc_serialize;
+extern crate dotenv;
 
 use iron::prelude::*;
 use oven::prelude::*;
-use iron::status;
-use hyper::header::{CookiePair, CookieJar, SetCookie};
-use router::Router;
 use rustc_serialize::json;
 use hyper::status::StatusCode; 
-use std::io::{Read, Write};
+use std::io::Read;
 
 #[macro_use]
 mod proto;
 mod db;
 mod authorization;
 
-use proto::response::*;
 use proto::error::*;
 use proto::schema::*;
 use authorization::*;
+
+use db::*;
 
 fn main() {
     let router = router! (
@@ -55,7 +57,7 @@ fn signin_handler(req: &mut Request) -> IronResult<Response> {
 
     println!("Signin request {:?}", signin_data);
     
-    let token = match Authorizer::signin(&signin_data) {
+    let token = match Authorizer::signin(&get_db_connection(), &signin_data) {
         Ok(token) => token,
         Err(err) => return err.into_api_response().into()
     };
@@ -77,7 +79,7 @@ fn signup_handler(req: &mut Request) -> IronResult<Response> {
 
     println!("Signup request: {:?}", signup_data);
     
-    let token = match Authorizer::signup(&signup_data) {
+    let token = match Authorizer::signup(&get_db_connection(), &signup_data) {
         Ok(token) => token,
         Err(err) => return err.into_api_response().into()
     };
