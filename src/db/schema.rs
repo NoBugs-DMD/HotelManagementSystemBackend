@@ -62,3 +62,10 @@ auto_queries!(
         pub HotelID: i32
     }
 );
+
+auto_queries!(
+    pub struct City {
+        pub ID: i32,
+        pub Name: String
+    }
+);

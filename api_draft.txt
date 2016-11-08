@@ -1,6 +1,6 @@
-intex.html:
-GET cities
-GET top_picks
+city:
+GET 
+PUT { ... }
 
 account:
 GET my_bookings/N?offset=O
@@ -51,3 +51,6 @@ cleaning:
 GET todo/
 PUT todo/ { ... }
 POST todo/by_id { ... }
+
+statistics:
+GET top_picks

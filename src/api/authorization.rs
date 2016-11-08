@@ -3,7 +3,13 @@ use std::sync::RwLock;
 use std::sync::Arc;
 use std::borrow::Borrow;
 
+use hyper::header::CookiePair;
 use postgres::Connection;
+use iron::prelude::*;
+use oven::prelude::*;
+use rustc_serialize::json;
+use hyper::status::StatusCode; 
+use std::io::Read;
 
 use ::proto::schema::*;
 use ::proto::error::*;
@@ -17,7 +23,51 @@ new_api_error!(SigninError);
 new_api_error!(SignupError);
 new_api_error!(NotAuthorizedError);
 
-pub struct Authorizer;
+pub fn signin_handler(req: &mut Request) -> IronResult<Response> {
+    let mut buffer = String::with_capacity(128);
+    req.body.read_to_string(&mut buffer).unwrap();
+
+    let signin_data: SigninData = match json::decode(&buffer) {
+        Ok(sd) => sd,
+        Err(json_err) => return InvalidSchemaError::from(json_err).into_api_response().into()
+    };
+
+    println!("Signin request {:?}", signin_data);
+    
+    let token = match Authorizer::signin(&get_db_connection(), &signin_data) {
+        Ok(token) => token,
+        Err(err) => return err.into_api_response().into()
+    };
+
+    let mut response = Response::with(StatusCode::Ok);
+    response.set_cookie(CookiePair::new("token".to_string(), token.to_owned()));
+
+    Ok(response)
+}
+
+pub fn signup_handler(req: &mut Request) -> IronResult<Response> {
+    let mut buffer = String::with_capacity(128);
+    req.body.read_to_string(&mut buffer).unwrap();
+
+    let signup_data: SignupData = match json::decode(&buffer) {
+        Ok(sd) => sd,
+        Err(json_err) => return InvalidSchemaError::from(json_err).into_api_response().into()
+    };
+
+    println!("Signup request: {:?}", signup_data);
+    
+    let token = match Authorizer::signup(&get_db_connection(), &signup_data) {
+        Ok(token) => token,
+        Err(err) => return err.into_api_response().into()
+    };
+
+    let mut response = Response::with(StatusCode::Ok);
+    response.set_cookie(CookiePair::new("token".to_string(), token.to_owned()));
+
+    Ok(response)
+}
+
+struct Authorizer;
 impl Authorizer {
     pub fn signin(conn: &Connection, signin_data: &SigninData) -> ApiResult<Token> {
         let query = Person::select_builder()
@@ -56,6 +106,7 @@ impl Authorizer {
     }
 }
 
+// Token storage
 lazy_static! {
     static ref TOKEN_MAP: TokenMap = TokenMap::new();
 }
