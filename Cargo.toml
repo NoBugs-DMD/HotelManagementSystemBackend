@@ -4,7 +4,8 @@ version = "0.1.0"
 authors = ["Mike Lubinets <lubinetsm@yandex.ru>"]
 
 [dependencies]
-postgres = "0.12.0"
+postgres = { version = "0.12.0", features = ["with-rustc-serialize", "with-chrono"] }
+chrono = { version = "*", features = ["rustc-serialize"] } 
 r2d2 = "0.7.1"
 r2d2_postgres = "0.11.0"
 hyper = "0.9"

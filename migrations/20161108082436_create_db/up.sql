@@ -28,16 +28,16 @@ CREATE TABLE Client (
 
 CREATE TABLE RuleSet (
   ID              SERIAL NOT NULL PRIMARY KEY, 
-  ManagerPersonID int4 NOT NULL references Manager(PersonID), 
+  ManagerPersonID int4 references Manager(PersonID), 
   Name            varchar(255) NOT NULL, 
-  Body            varchar(255) NOT NULL
+  Body            text NOT NULL
 );
 
 CREATE TABLE RoomLevel (
   ID        SERIAL NOT NULL PRIMARY KEY, 
   RuleSetID int4 NOT NULL references RuleSet(ID), 
   LevelName varchar(10) NOT NULL, 
-  PerNight  int4 
+  PerNight  int4 NOT NULL
 );
 
 CREATE TABLE ClientLevel (
@@ -49,7 +49,8 @@ CREATE TABLE ClientLevel (
 
 CREATE TABLE Review (
   ID                SERIAL NOT NULL PRIMARY KEY, 
-  Body              int4, 
+  BookingID         int4 NOT NULL references Booking(ID),
+  Body              text, 
   LocationRate      int4 NOT NULL, 
   CleanlinessRate   int4 NOT NULL, 
   ServiceRate       int4 NOT NULL, 
@@ -97,25 +98,24 @@ CREATE TABLE EmployedIn (
 );
 
 CREATE TABLE Room (
-  HotelID    int4 NOT NULL references Hotel(ID), 
-  RoomNumber int4 NOT NULL,  
-  RoomLevelID    int4 NOT NULL references RoomLevel(ID), 
-  PhotoSetID int4 references PhotoSet(ID),
+  HotelID     int4 NOT NULL references Hotel(ID), 
+  RoomNumber  int4 NOT NULL,  
+  RoomLevelID int4 NOT NULL references RoomLevel(ID), 
+  PhotoSetID  int4 references PhotoSet(ID),
   PRIMARY KEY (HotelID, RoomNumber)
 );
 
 CREATE TABLE Booking (
   ID             SERIAL NOT NULL PRIMARY KEY, 
   ClientPersonID int4 NOT NULL references Client(PersonID), 
-  HotelID        int4 NOT NULL references Hotel(ID), 
-  ReviewID       int4 references Review(ID), 
+  HotelID        int4 NOT NULL references Hotel(ID),  
   RoomNumber     int4 NOT NULL, 
   BookingTime    timestamp NOT NULL, 
   ArrivalTime    timestamp NOT NULL, 
   DepartureTime  timestamp NOT NULL, 
   FullCost       int4 NOT NULL, 
-  Paid           bool NOT NULL, 
-  Cancelled      bool NOT NULL
+  Paid           boolean NOT NULL, 
+  Cancelled      boolean NOT NULL
 );
 
 CREATE TABLE MaintainedBy (
@@ -130,9 +130,9 @@ CREATE TABLE ToClean (
   HotelID    int4 NOT NULL, 
   RoomNumber int4 NOT NULL, 
   DueTime    timestamp NOT NULL, 
-  Done       bool NOT NULL, 
+  Done       boolean NOT NULL, 
   DoneTime   timestamp NOT NULL, 
-  Cancelled  bool NOT NULL,
+  Cancelled  boolean NOT NULL,
   FOREIGN KEY (HotelID, RoomNumber) REFERENCES Room (HotelID, RoomNumber)
 );
 
