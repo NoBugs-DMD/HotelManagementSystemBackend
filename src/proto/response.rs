@@ -24,10 +24,10 @@ impl<D> ApiResponse<D>
     }
 }
 
-impl<D> Into<IronResult<Response>> for ApiResponse<D> 
+impl<D> Into<Response> for ApiResponse<D> 
     where D: Encodable
 {
-    fn into(self) -> IronResult<Response> {
+    fn into(self) -> Response {
         let mut response = match self { 
             ApiResponse::Ok(_) => Response::with(StatusCode::Ok),
             ApiResponse::Err(..) => Response::with(StatusCode::Forbidden),
@@ -35,7 +35,7 @@ impl<D> Into<IronResult<Response>> for ApiResponse<D>
 
         response.body = Some(box self.to_json().unwrap());
 
-        Ok(response)
+        response
     }
 }
 

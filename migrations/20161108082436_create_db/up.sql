@@ -22,8 +22,8 @@ CREATE TABLE Cleaner (
 );
 
 CREATE TABLE Client (
-  PersonID           int4 NOT NULL PRIMARY KEY references Person(ID), 
-  ClientLevelLevelID int4 NOT NULL
+  PersonID      int4 NOT NULL PRIMARY KEY references Person(ID), 
+  ClientLevelID int4 NOT NULL
 );
 
 CREATE TABLE RuleSet (
@@ -45,17 +45,6 @@ CREATE TABLE ClientLevel (
   RuleSetID          int4 NOT NULL references RuleSet(ID), 
   DiscountPercentage int4 NOT NULL, 
   LevelName          varchar(255) NOT NULL 
-);
-
-CREATE TABLE Review (
-  ID                SERIAL NOT NULL PRIMARY KEY, 
-  BookingID         int4 NOT NULL references Booking(ID),
-  Body              text, 
-  LocationRate      int4 NOT NULL, 
-  CleanlinessRate   int4 NOT NULL, 
-  ServiceRate       int4 NOT NULL, 
-  ValueForMoneyRate int4 NOT NULL, 
-  CreatedAt         timestamp NOT NULL
 );
 
 CREATE TABLE PhotoSet (
@@ -118,6 +107,17 @@ CREATE TABLE Booking (
   Cancelled      boolean NOT NULL
 );
 
+CREATE TABLE Review (
+  ID                SERIAL NOT NULL PRIMARY KEY, 
+  BookingID         int4 NOT NULL references Booking(ID),
+  Body              text, 
+  LocationRate      int4 NOT NULL, 
+  CleanlinessRate   int4 NOT NULL, 
+  ServiceRate       int4 NOT NULL, 
+  ValueForMoneyRate int4 NOT NULL, 
+  CreatedAt         timestamp NOT NULL
+);
+
 CREATE TABLE MaintainedBy (
   BookingID            int4 NOT NULL references Booking(ID), 
   ReceptionistPersonID int4 NOT NULL references Receptionist(PersonID), 
@@ -141,3 +141,17 @@ CREATE TABLE AssignedCleaning (
   CleanerPersonID int4 NOT NULL references Cleaner(PersonID),
   PRIMARY KEY (ToCleanID, CleanerPersonID)
 );
+
+-- Trigger to auto add registered users to Client table
+
+CREATE OR REPLACE FUNCTION auto_add_client() RETURNS TRIGGER as $emp_auto_add_client$
+DECLARE
+BEGIN
+    INSERT INTO Client (PersonID, ClientLevelID) values (new.ID, 0);
+    RETURN new;
+END;
+$emp_auto_add_client$
+LANGUAGE 'plpgsql';
+
+CREATE TRIGGER auto_add_client AFTER INSERT ON Person
+    FOR EACH ROW EXECUTE PROCEDURE auto_add_client(); 

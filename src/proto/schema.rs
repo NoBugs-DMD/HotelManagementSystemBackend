@@ -15,3 +15,12 @@ pub struct SignupData {
     pub email: String,
     pub pass_md5: String,
 }
+
+#[derive(Debug, Copy, Clone, RustcEncodable)]
+pub struct Roles {
+    pub client: bool,
+    pub owner: bool,
+    pub manager: bool,
+    pub cleaner: bool,
+    pub receptionist: bool
+}

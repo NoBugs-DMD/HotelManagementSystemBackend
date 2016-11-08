@@ -36,6 +36,9 @@ fn main() {
     // TODO __CHANGE__ key and load it from non-gited file.
     chain.link(oven::new(Vec::from(&b"f8f9eaf1ecdedff5e5b749c58115441e"[..])));
     
+    // Get db connection from pool (will block until pool is ready)
+    db::get_db_connection();
+
     Iron::new(chain).http("localhost:8080").unwrap();
 }
 

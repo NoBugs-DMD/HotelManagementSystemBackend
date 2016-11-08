@@ -22,7 +22,7 @@ pub fn get_cities_handler(req: &mut Request) -> IronResult<Response> {
     let cities = rows.into_iter().map(City::from)
                                  .collect::<Vec<City>>();
 
-    ApiResponse::Ok(cities).into()
+    Ok(ApiResponse::Ok(cities).into())
 }
 
 pub fn put_city_handler(req: &mut Request) -> IronResult<Response> {
@@ -31,7 +31,7 @@ pub fn put_city_handler(req: &mut Request) -> IronResult<Response> {
 
     let new_city: City = match json::decode(&buffer) {
         Ok(city) => city,
-        Err(err) => return InvalidSchemaError::from(err).into_api_response().into()
+        Err(err) => return Ok(InvalidSchemaError::from(err).into_api_response().into())
     };
 
     let conn = get_db_connection();

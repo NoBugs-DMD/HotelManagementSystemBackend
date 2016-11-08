@@ -3,9 +3,9 @@ GET
 PUT { ... }
 
 account:
-GET my_bookings/N?offset=O
-GET my_info { ... , permissions }
-PUT my_info
+GET bookings/N?offset=O
+GET info { ... , roles }
+POST info
 
 bookings:
 GET by_id
