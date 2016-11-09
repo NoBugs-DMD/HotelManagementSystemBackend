@@ -1,5 +1,6 @@
 CREATE TABLE Person (
-  ID        SERIAL NOT NULL PRIMARY KEY, 
+  ID        SERIAL NOT NULL PRIMARY KEY,
+  Name      varchar(255) NOT NULL, 
   Login     varchar(255) NOT NULL UNIQUE, 
   Email     varchar(255) NOT NULL UNIQUE, 
   PassHash  varchar(64) NOT NULL 

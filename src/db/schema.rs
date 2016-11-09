@@ -9,6 +9,7 @@ auto_queries!(
     pub struct Person {
         pub ID: i32,
         pub Login: String,
+        pub Name: String,
         pub Email: String,
         pub PassHash: String
     }
