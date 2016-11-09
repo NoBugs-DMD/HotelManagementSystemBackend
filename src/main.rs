@@ -34,7 +34,8 @@ fn main() {
         signup:               post   "/api/signup/"               => api::authorization::signup_handler,
         city_get_cities:      get    "/api/city/"                 => api::city::get_cities_handler,
         city_put_city:        put    "/api/city/"                 => api::city::put_city_handler,
-        account_get_bookings: get    "/api/account/bookings/:cnt" => api::account::get_bookings_handle,
+        account_all_bookings: get    "/api/account/bookings/"     => api::account::get_bookings_handle,
+        account_bookings:     get    "/api/account/bookings/:cnt" => api::account::get_bookings_handle,
     );
     
     let mut chain = Chain::new(router);

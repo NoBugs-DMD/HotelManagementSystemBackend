@@ -11,6 +11,7 @@ use rustc_serialize::json;
 use hyper::status::StatusCode; 
 use std::io::Read;
 
+use super::request_body;
 use ::proto::schema::*;
 use ::proto::error::*;
 use ::proto::response::*;
@@ -25,10 +26,7 @@ new_api_error!(SignupError);
 new_api_error!(NotAuthorizedError);
 
 pub fn signin_handler(req: &mut Request) -> IronResult<Response> {
-    let mut buffer = String::with_capacity(128);
-    req.body.read_to_string(&mut buffer).unwrap();
-
-    let signin_data: SigninData = match json::decode(&buffer) {
+    let signin_data: SigninData = match json::decode(&request_body(req)) {
         Ok(sd) => sd,
         Err(json_err) => return Ok(InvalidSchemaError::from(json_err).into_api_response().into())
     };
@@ -44,10 +42,7 @@ pub fn signin_handler(req: &mut Request) -> IronResult<Response> {
 }
 
 pub fn signup_handler(req: &mut Request) -> IronResult<Response> {
-    let mut buffer = String::with_capacity(128);
-    req.body.read_to_string(&mut buffer).unwrap();
-
-    let signup_data: SignupData = match json::decode(&buffer) {
+    let signup_data: SignupData = match json::decode(&request_body(req)) {
         Ok(sd) => sd,
         Err(json_err) => return Ok(InvalidSchemaError::from(json_err).into_api_response().into())
     };
