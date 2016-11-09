@@ -9,6 +9,7 @@ extern crate r2d2_postgres;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate router;
 extern crate hyper;
+extern crate params;
 extern crate iron;
 extern crate cookie;
 extern crate oven;
@@ -25,10 +26,11 @@ mod api;
 
 fn main() {
     let router = router! (
-        signin:     post   "/api/singin/" => api::authorization::signin_handler,
-        signup:     post   "/api/signup/" => api::authorization::signup_handler,
-        get_cities: get    "/api/city/"   => api::city::get_cities_handler,
-        put_city:   put    "/api/city/"   => api::city::put_city_handler,
+        signin:               post   "/api/signin/"               => api::authorization::signin_handler,
+        signup:               post   "/api/signup/"               => api::authorization::signup_handler,
+        city_get_cities:      get    "/api/city/"                 => api::city::get_cities_handler,
+        city_put_city:        put    "/api/city/"                 => api::city::put_city_handler,
+        account_get_bookings: get    "/api/account/bookings/:cnt" => api::account::get_bookings_handle,
     );
     
     let mut chain = Chain::new(router);

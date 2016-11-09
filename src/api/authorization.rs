@@ -71,11 +71,16 @@ fn respond_with_roles_and_token(token: String) -> Response {
     };
 
     let mut response: Response = ApiResponse::Ok(roles).into();
-    response.set_cookie(CookiePair::new("token".to_string(), token.to_owned()));
+    let mut cookie = CookiePair::new("token".to_string(), token.to_owned());
+    
+    // Nulling the path to tell browser to pass cookie for whole domain
+    cookie.path = Some(String::new());
+    
+    response.set_cookie(cookie);
     response
 }
 
-struct Authorizer;
+pub struct Authorizer;
 impl Authorizer {
     pub fn signin(conn: &Connection, signin_data: &SigninData) -> ApiResult<Token> {
         let query = Person::select_builder()
@@ -84,7 +89,7 @@ impl Authorizer {
 
         print!("query: {:?}", query);
 
-        let rows = conn.query(&query, &[&signin_data.login, &signin_data.pass_md5]).unwrap();
+        let rows = conn.query(&query, &[&signin_data.Login, &signin_data.PassHash]).unwrap();
         
         assert!(rows.len() <= 1, "Database is inconsistent");
         if rows.is_empty() {
@@ -100,16 +105,25 @@ impl Authorizer {
 
     pub fn signup(conn: &Connection, signup_data: &SignupData) -> ApiResult<Token> {
         match conn.execute(&Person::insert_query(), 
-                           &[&signup_data.login, &signup_data.email, &signup_data.pass_md5]) {
+                           &[&signup_data.Login, &signup_data.Name, &signup_data.Email, &signup_data.PassHash]) {
             Ok(_) => (),
             Err(e) => return Err(box SignupError::from(format!("{}", e))),
         }
         
         Self::signin(conn, &SigninData {
-            login: signup_data.login.clone(),
-            pass_md5: signup_data.pass_md5.clone()
+            Login: signup_data.Login.clone(),
+            PassHash: signup_data.PassHash.clone()
         })
     }
+
+    pub fn authorize_request(req: &mut Request) -> ApiResult<i32> {
+        let token_cookie = match req.get_cookie("token") {
+            Some(tc) => tc,
+            None => return Err(box NotAuthorizedError::from("No token found in request".to_string()))
+        }; 
+
+        Self::get_id(&token_cookie.value)
+    }   
 
     pub fn get_id(token: &Token) -> ApiResult<i32> {
         TOKEN_MAP.get(token)
@@ -140,11 +154,11 @@ impl Authorizer {
         let receptionists = query_all_with_id!(Receptionist);
 
         let roles = Roles {
-            client: !clients.is_empty(),
-            owner:  !owners.is_empty(),
-            manager: !managers.is_empty(),
-            cleaner: !cleaners.is_empty(),
-            receptionist: !receptionists.is_empty(), 
+            Client: !clients.is_empty(),
+            Owner:  !owners.is_empty(),
+            Manager: !managers.is_empty(),
+            Cleaner: !cleaners.is_empty(),
+            Receptionist: !receptionists.is_empty(), 
         };
 
         ROLES_MAP.put(id, roles.clone());
