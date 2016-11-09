@@ -3,11 +3,13 @@
 #![feature(inclusive_range_syntax)]
 #![feature(log_syntax)]
 
+#[macro_use] extern crate lazy_static;
+#[macro_use] extern crate router;
+#[macro_use] extern crate log;
+extern crate env_logger;
 extern crate postgres;
 extern crate r2d2;
 extern crate r2d2_postgres;
-#[macro_use] extern crate lazy_static;
-#[macro_use] extern crate router;
 extern crate hyper;
 extern crate params;
 extern crate iron;
@@ -25,6 +27,8 @@ mod db;
 mod api;
 
 fn main() {
+    init_logging();
+
     let router = router! (
         signin:               post   "/api/signin/"               => api::authorization::signin_handler,
         signup:               post   "/api/signup/"               => api::authorization::signup_handler,
@@ -44,3 +48,17 @@ fn main() {
     Iron::new(chain).http("localhost:8080").unwrap();
 }
 
+use std::env;
+use log::{LogRecord, LogLevelFilter};
+use env_logger::LogBuilder;
+
+fn init_logging() {
+    let mut builder = LogBuilder::new();
+    builder.filter(None, LogLevelFilter::Info);
+
+    if env::var("RUST_LOG").is_ok() {
+       builder.parse(&env::var("RUST_LOG").unwrap());
+    }
+
+    builder.init().unwrap();
+}

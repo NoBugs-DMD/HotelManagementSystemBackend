@@ -18,6 +18,8 @@ pub fn get_cities_handler(req: &mut Request) -> IronResult<Response> {
     let query = City::select_builder().build();
     let conn = get_db_connection();
 
+    info!("request GET /city");
+
     let rows = conn.query(&query, &[]).unwrap();
     let cities = rows.into_iter().map(City::from)
                                  .collect::<Vec<City>>();
@@ -33,6 +35,8 @@ pub fn put_city_handler(req: &mut Request) -> IronResult<Response> {
         Ok(city) => city,
         Err(err) => return Ok(InvalidSchemaError::from(err).into_api_response().into())
     };
+
+    info!("request POST /city {{ {:?} }}", new_city);
 
     let conn = get_db_connection();
     let query = City::insert_query();

@@ -38,6 +38,8 @@ pub fn get_bookings_handle(req: &mut Request) -> IronResult<Response> {
         .find("cnt")
         .map(|s| i32::from_str(s).unwrap())
         .unwrap_or(i32::MAX);
+ 
+    info!("request GET /account/bookings {{ id: {}, cnt: {}, ofst: {} }}", id, cnt, ofst);
     
     let conn = get_db_connection();
     let rows = conn.query(&Booking::select_builder()

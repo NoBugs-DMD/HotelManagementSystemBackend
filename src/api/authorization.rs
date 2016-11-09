@@ -33,14 +33,12 @@ pub fn signin_handler(req: &mut Request) -> IronResult<Response> {
         Err(json_err) => return Ok(InvalidSchemaError::from(json_err).into_api_response().into())
     };
 
-    println!("Signin request {:?}", signin_data);
+    info!("request POST /signin {{ {:?} }}", signin_data);
     
     let token = match Authorizer::signin(&get_db_connection(), &signin_data) {
         Ok(token) => token,
         Err(err) => return Ok(err.into_api_response().into())
     };
-
-    println!("token: {}", token);
 
     Ok(respond_with_roles_and_token(token))
 }
@@ -54,7 +52,7 @@ pub fn signup_handler(req: &mut Request) -> IronResult<Response> {
         Err(json_err) => return Ok(InvalidSchemaError::from(json_err).into_api_response().into())
     };
 
-    println!("Signup request: {:?}", signup_data);
+    info!("request POST /signup {{ {:?} }}", signup_data);
     
     let token = match Authorizer::signup(&get_db_connection(), &signup_data) {
         Ok(token) => token,
@@ -86,8 +84,6 @@ impl Authorizer {
         let query = Person::select_builder()
             .filter("Login = $1 and PassHash = $2")
             .build();
-
-        print!("query: {:?}", query);
 
         let rows = conn.query(&query, &[&signin_data.Login, &signin_data.PassHash]).unwrap();
         

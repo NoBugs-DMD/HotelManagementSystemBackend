@@ -17,3 +17,14 @@ oven = "0.4.0"
 rustc-serialize = "^0.3"
 lazy_static = "*"
 dotenv = "*"
+log = "*"
+env_logger = "*"
+
+[profile.dev]
+opt-level = 0      
+debug = true       
+rpath = false      
+lto = false        
+debug-assertions = true
+codegen-units = 4
+panic = 'unwind' 
