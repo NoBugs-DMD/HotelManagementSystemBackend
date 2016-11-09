@@ -7,7 +7,6 @@ use ::proto::schema::*;
 use ::proto::response::*;
 use ::proto::error::*;
 use ::db::schema::*;
-use ::db::builder::*;
 use ::db::*;
 
 pub fn get_cities_handler(_: &mut Request) -> IronResult<Response> {

@@ -1,9 +1,13 @@
+use std::borrow::Cow;
+
 #[derive(Debug)]
 pub enum ErrorCode {
     InvalidSchemaError = 1,
+    IncompleteDataError,
     SigninError,
     SignupError,
     NotAuthorizedError,
+    OldPasswordIsInvalidError,
 }
 
 impl Into<i32> for ErrorCode {
@@ -17,7 +21,7 @@ pub type ApiResult<D> = Result<D, Box<ApiError>>;
 use super::response::*;
 pub trait ApiError {
     fn code(&self) -> i32;
-    fn description(&self) -> String;
+    fn description(&self) -> Cow<'static, str>;
     fn into_api_response(&self) -> ApiResponse<()> {
         ApiResponse::Err(self.code(), self.description())
     }
@@ -27,12 +31,12 @@ macro_rules! new_api_error {
     ($ident:ident) => {
         #[derive(Debug, Clone)]
         pub struct $ident {
-            description: String,
+            description: ::std::borrow::Cow<'static, str>,
         }
 
         impl ::std::fmt::Display for $ident {
             fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
-                write!(fmt, "description: \"{}\"", self.description)
+                write!(fmt, "description: \"{}\"", &self.description)
             }
         }
 
@@ -41,15 +45,17 @@ macro_rules! new_api_error {
                 ::proto::error::ErrorCode::$ident as i32
             }
 
-            fn description(&self) -> String {
+            fn description(&self) -> ::std::borrow::Cow<'static, str> {
                 self.description.clone()
             }
         }
 
-        impl From<String> for $ident {
-            fn from(desc: String) -> Self {
+        impl $ident {  
+            pub fn from_str<U>(desc: U) -> Self 
+                where U: Into<::std::borrow::Cow<'static, str>>
+            {
                 Self {
-                    description: desc
+                    description: desc.into()
                 }
             }
         }
@@ -61,7 +67,7 @@ macro_rules! api_error_gen_from_error {
         impl From<$from> for $to {
             fn from(raw: DecoderError) -> Self {
                 $to {
-                    description: format!("{}", raw)
+                    description: ::std::borrow::Cow::from(format!("{}", raw))
                 }
             }
         }

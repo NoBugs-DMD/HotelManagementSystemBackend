@@ -4,11 +4,6 @@ macro_rules! opt_format {
     );
     
     ($ident:expr, $fmt:expr, $($arg:expr),*) => (
-        $ident.map(|item| format!($fmt, item, $($arg,)*))
+        $ident.map(|item| Cow::from(format!($fmt, item, $($arg,)*)))
     );
-}
-macro_rules! opt_as_str {
-    ($ident:expr) => (
-        $ident.as_ref().map(String::as_str)
-    )
 }

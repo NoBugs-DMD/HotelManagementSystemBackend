@@ -14,7 +14,6 @@ use ::proto::schema::*;
 use ::proto::error::*;
 use ::proto::response::*;
 use ::db::schema::*;
-use ::db::builder::*;
 use ::db::*;
 
 pub type Token = String;
@@ -82,7 +81,7 @@ impl Authorizer {
 
         assert!(rows.len() <= 1, "Database is inconsistent");
         if rows.is_empty() {
-            return Err(box SigninError::from("Login-password pair not found".to_owned()));
+            return Err(box SigninError::from_str("Login-password pair not found"));
         }
 
         let person = Person::from(rows.get(0));
@@ -99,7 +98,7 @@ impl Authorizer {
                              &signup_data.Email,
                              &signup_data.PassHash]) {
             Ok(_) => (),
-            Err(e) => return Err(box SignupError::from(format!("{}", e))),
+            Err(e) => return Err(box SignupError::from_str(format!("{}", e))),
         }
 
         Self::signin(conn, &SigninData {
@@ -112,19 +111,19 @@ impl Authorizer {
         let token_cookie = match req.get_cookie("token") {
             Some(tc) => tc,
             None => {
-                return Err(box NotAuthorizedError::from("No token found in request".to_string()))
+                return Err(box NotAuthorizedError::from_str("No token found in request"))
             }
         };
 
         Self::get_id(&token_cookie.value)
     }
 
-    pub fn get_id(token: &Token) -> ApiResult<i32> {
+    pub fn get_id(token: &str) -> ApiResult<i32> {
         TOKEN_MAP.get(token)
-            .ok_or(box NotAuthorizedError::from("Token has expired".to_owned()))
+            .ok_or(box NotAuthorizedError::from_str("Token has expired"))
     }
 
-    pub fn get_roles(conn: &Connection, token: &Token) -> ApiResult<Roles> {
+    pub fn get_roles(conn: &Connection, token: &str) -> ApiResult<Roles> {
         let id = Self::get_id(token)?;
 
         if let Some(roles) = ROLES_MAP.get(&id) {
@@ -177,7 +176,9 @@ impl<K, V> SyncMap<K, V>
         SyncMap { map: Arc::new(RwLock::new(HashMap::new())) }
     }
 
-    pub fn get<U: Borrow<K>>(&self, token: U) -> Option<V> {
+    pub fn get<Q: ?Sized>(&self, token: &Q) -> Option<V> 
+        where K: Borrow<Q>, Q: Hash + Eq    
+    {
         self.map.read().unwrap().get(token.borrow()).cloned()
     }
 

@@ -37,6 +37,8 @@ fn main() {
         city_put_city:        put    "/api/city/"                 => api::city::put_city_handler,
         account_all_bookings: get    "/api/account/bookings/"     => api::account::get_bookings_handle,
         account_bookings:     get    "/api/account/bookings/:cnt" => api::account::get_bookings_handle,
+        account_info:         get    "/api/account/"              => api::account::get_account_info,
+        update_account_info:  post   "/api/account/"              => api::account::update_account_info,
     );
 
     let mut chain = Chain::new(router);

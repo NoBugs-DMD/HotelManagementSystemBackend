@@ -2,13 +2,14 @@ use rustc_serialize::Encodable;
 use rustc_serialize::json::{self, EncodeResult};
 use iron::prelude::*;
 use hyper::status::StatusCode;
+use std::borrow::Cow;
 
 #[derive(Debug, Clone, RustcEncodable)]
 pub enum ApiResponse<D>
     where D: Encodable
 {
     Ok(D),
-    Err(i32, String),
+    Err(i32, Cow<'static, str>),
 }
 
 impl<D> ApiResponse<D>
@@ -20,7 +21,7 @@ impl<D> ApiResponse<D>
             ApiResponse::Err(ref code, ref desc) => {
                 Ok(format!("{{ \"error_code\": {}, \"description\": \"{}\" }}",
                            code,
-                           desc))
+                           &desc))
             }
         }
     }

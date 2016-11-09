@@ -1,6 +1,7 @@
 use rustc_serialize::json::DecoderError;
 
 new_api_error!(InvalidSchemaError);
+new_api_error!(IncompleteDataError);
 api_error_gen_from_error!(DecoderError, InvalidSchemaError);
 
 #[derive(Debug, RustcDecodable)]
@@ -24,4 +25,12 @@ pub struct Roles {
     pub Manager: bool,
     pub Cleaner: bool,
     pub Receptionist: bool,
+}
+
+#[derive(Debug, RustcDecodable)]
+pub struct UpdateAccountInfoData {
+    pub NewName: Option<String>,
+    pub NewEmail: Option<String>,
+    pub OldPassHash: Option<String>,
+    pub NewPassHash: Option<String>,
 }

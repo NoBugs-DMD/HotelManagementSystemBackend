@@ -2,18 +2,26 @@
 mod macros;
 mod delete;
 mod select;
+mod update;
+mod insert;
 
-pub use self::delete::*;
-pub use self::select::*;
+pub use self::delete::DeleteQueryBuilder;
+pub use self::select::SelectQueryBuilder;
+pub use self::update::UpdateQueryBuilder;
+pub use self::insert::InsertQueryBuilder;
 
-pub trait QueryBuilder {
-    fn new() -> Self;
-    fn with_template(template: String) -> Self;
+pub trait QueryBuilder<'a> {
+    fn default() -> Self;
+    
+    fn with_template<U>(template: U) -> Self
+        where U: Into<Cow<'a, str>>;
+
     fn build(self) -> String;
 }
 
 use std::fmt;
 use std::error::Error;
+use std::borrow::Cow;
 
 #[derive(Debug)]
 struct NoSuchPatternError(String);
@@ -31,25 +39,25 @@ impl Error for NoSuchPatternError {
 }
 
 use std::result;
-type Result = result::Result<String, NoSuchPatternError>;
+type Result<'a> = result::Result<Cow<'a, str>, NoSuchPatternError>;
 trait Substitute {
-    fn substitute(self, pattern: &str, substitution: Option<&str>) -> Result;
+    fn substitute(self, pattern: &str, substitution: Option<Cow<str>>) -> Result<'static>;
 }
 
-impl Substitute for String {
-    fn substitute(self, pattern: &str, substitution: Option<&str>) -> Result {
+impl<'a> Substitute for Cow<'a, str> {
+    fn substitute(self, pattern: &str, substitution: Option<Cow<str>>) -> Result<'static> {
         if substitution.is_none() {
-            Ok(self.replace(pattern, ""))
+            Ok(Cow::from(self.replace(pattern, "")))
         } else {
             self.find(pattern)
                 .ok_or(NoSuchPatternError(format!("No pattern {:?} in template", pattern)))?;
-            Ok(self.replace(pattern, &substitution.unwrap()))
+            Ok(Cow::from(self.replace(pattern, &substitution.unwrap())))
         }
     }
 }
 
-impl Substitute for Result {
-    fn substitute(self, pattern: &str, substitution: Option<&str>) -> Result {
+impl Substitute for Result<'static> {
+    fn substitute(self, pattern: &str, substitution: Option<Cow<str>>) -> Result<'static> {
         match self {
             Ok(string) => string.substitute(pattern, substitution),
             Err(err) => Err(err),
