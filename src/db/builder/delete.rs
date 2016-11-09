@@ -11,14 +11,14 @@ pub struct DeleteQueryBuilder<'a> {
 }
 
 impl<'a> DeleteQueryBuilder<'a> {
-    pub fn filter<U>(mut self, where_clause: U) -> Self 
+    pub fn filter<U>(mut self, where_clause: U) -> Self
         where U: Into<Cow<'a, str>>
     {
         self.where_clause = Some(where_clause.into());
         self
     }
 
-    pub fn from_tables<U>(mut self, tables: U) -> Self 
+    pub fn from_tables<U>(mut self, tables: U) -> Self
         where U: Into<Cow<'a, str>>
     {
         self.from_tables = Some(tables.into());
@@ -35,15 +35,15 @@ impl<'a> QueryBuilder<'a> for DeleteQueryBuilder<'a> {
         }
     }
 
-    fn with_template<U>(template: U) -> Self 
+    fn with_template<U>(template: U) -> Self
         where U: Into<Cow<'a, str>>
     {
         let mut builder = Self::default();
-        builder.template =template.into();
+        builder.template = template.into();
         builder
     }
 
-    fn build(mut self) -> String {
+    fn build(self) -> String {
         debug_assert!(self.from_tables.is_some());
         let where_clause = opt_format!(self.where_clause, "WHERE {}");
 

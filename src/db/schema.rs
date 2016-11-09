@@ -1,6 +1,5 @@
 use postgres::rows::Row;
 use chrono::NaiveDateTime;
-use std::borrow::Cow;
 
 use super::*;
 

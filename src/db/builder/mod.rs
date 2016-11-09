@@ -12,10 +12,7 @@ pub use self::insert::InsertQueryBuilder;
 
 pub trait QueryBuilder<'a> {
     fn default() -> Self;
-    
-    fn with_template<U>(template: U) -> Self
-        where U: Into<Cow<'a, str>>;
-
+    fn with_template<U>(template: U) -> Self where U: Into<Cow<'a, str>>;
     fn build(self) -> String;
 }
 
@@ -50,7 +47,7 @@ impl<'a> Substitute for Cow<'a, str> {
             Ok(Cow::from(self.replace(pattern, "")))
         } else {
             self.find(pattern)
-                .ok_or(NoSuchPatternError(format!("No pattern {:?} in template", pattern)))?;
+                .ok_or_else(|| NoSuchPatternError(format!("No pattern {:?} in template", pattern)))?;
             Ok(Cow::from(self.replace(pattern, &substitution.unwrap())))
         }
     }

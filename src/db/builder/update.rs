@@ -3,9 +3,7 @@ use super::Substitute;
 use std::borrow::Cow;
 use std::char;
 
-const UPDATE_DEFAULT_TEMPLATE: &'static str = "UPDATE $table \
-                                               SET $columns \
-                                               $where_clause;"; 
+const UPDATE_DEFAULT_TEMPLATE: &'static str = "UPDATE $table SET $columns $where_clause;";
 
 pub struct UpdateQueryBuilder<'a> {
     template:     Cow<'a, str>,
@@ -15,21 +13,21 @@ pub struct UpdateQueryBuilder<'a> {
 }
 
 impl<'a> UpdateQueryBuilder<'a> {
-    pub fn set<U>(mut self, column: U) -> Self 
+    pub fn set<U>(mut self, column: U) -> Self
         where U: Into<Cow<'a, str>>
     {
         self.columns.push(column.into());
         self
     }
 
-    pub fn table<U>(mut self, table: U) -> Self 
+    pub fn table<U>(mut self, table: U) -> Self
         where U: Into<Cow<'a, str>>
     {
         self.table = Some(table.into());
         self
     }
 
-    pub fn filter<U>(mut self, where_clause: U) -> Self 
+    pub fn filter<U>(mut self, where_clause: U) -> Self
         where U: Into<Cow<'a, str>>
     {
         self.where_clause = Some(where_clause.into());
@@ -47,7 +45,7 @@ impl<'a> QueryBuilder<'a> for UpdateQueryBuilder<'a> {
         }
     }
 
-    fn with_template<U>(template: U) -> Self 
+    fn with_template<U>(template: U) -> Self
         where U: Into<Cow<'a, str>>
     {
         let mut builder = Self::default();
@@ -55,7 +53,7 @@ impl<'a> QueryBuilder<'a> for UpdateQueryBuilder<'a> {
         builder
     }
 
-    fn build(mut self) -> String {
+    fn build(self) -> String {
         debug_assert!(!self.columns.is_empty());
         debug_assert!(self.table.is_some());
 
@@ -67,7 +65,7 @@ impl<'a> QueryBuilder<'a> for UpdateQueryBuilder<'a> {
             for (i, column) in self.columns.into_iter().enumerate() {
                 columns.push_str(&column);
                 columns.push_str("=$");
-                columns.push(char::from_digit((i+1) as u32, 10).unwrap());
+                columns.push(char::from_digit((i + 1) as u32, 10).unwrap());
                 if i < len - 1 {
                     columns.push(',');
                 }
@@ -77,8 +75,8 @@ impl<'a> QueryBuilder<'a> for UpdateQueryBuilder<'a> {
 
 
         self.template
-            .substitute("$table",        self.table)
-            .substitute("$columns",      columns)
+            .substitute("$table", self.table)
+            .substitute("$columns", columns)
             .substitute("$where_clause", where_clause)
             .unwrap()
             .into_owned()

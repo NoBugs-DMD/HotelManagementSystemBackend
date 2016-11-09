@@ -50,6 +50,7 @@ macro_rules! new_api_error {
             }
         }
 
+        #[allow(dead_code)]
         impl $ident {  
             pub fn from_str<U>(desc: U) -> Self 
                 where U: Into<::std::borrow::Cow<'static, str>>

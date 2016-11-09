@@ -17,31 +17,38 @@ use ::db::*;
 
 new_api_error!(OldPasswordIsInvalidError);
 
-pub fn get_bookings_handle(req: &mut Request) -> IronResult<Response> {    
+pub fn get_bookings_handle(req: &mut Request) -> IronResult<Response> {
     let id = match Authorizer::authorize_request(req) {
         Ok(id) => id,
-        Err(err) => return Ok(err.into_api_response().into())
+        Err(err) => return Ok(err.into_api_response().into()),
     };
 
-    let ofst = req.get_ref::<Params>().unwrap()
+    let ofst = req.get_ref::<Params>()
+        .unwrap()
         .find(&["offset"])
         .map(|val| i32::from_value(val).unwrap_or(0))
         .unwrap_or(0);
 
-    let cnt = req.extensions.get::<Router>().unwrap()
+    let cnt = req.extensions
+        .get::<Router>()
+        .unwrap()
         .find("cnt")
         .map(|s| i32::from_str(s).unwrap())
         .unwrap_or(i32::MAX);
- 
-    info!("request GET /account/bookings {{ id: {}, cnt: {}, ofst: {} }}", id, cnt, ofst);
-    
+
+    info!("request GET /account/bookings {{ id: {}, cnt: {}, ofst: {} }}",
+          id,
+          cnt,
+          ofst);
+
     let conn = get_db_connection();
     let bookings = conn.query(&Booking::select_builder()
-                       .filter("ClientPersonID = $1")
-                       .limit(cnt)
-                       .offset(ofst)
-                       .build(),
-                    &[&id]).unwrap()
+                   .filter("ClientPersonID = $1")
+                   .limit(cnt)
+                   .offset(ofst)
+                   .build(),
+               &[&id])
+        .unwrap()
         .into_iter()
         .map(Booking::from)
         .collect::<Vec<Booking>>();
@@ -52,7 +59,7 @@ pub fn get_bookings_handle(req: &mut Request) -> IronResult<Response> {
 pub fn get_account_info(req: &mut Request) -> IronResult<Response> {
     let id = match Authorizer::authorize_request(req) {
         Ok(id) => id,
-        Err(err) => return Ok(err.into_api_response().into())
+        Err(err) => return Ok(err.into_api_response().into()),
     };
 
     info!("request GET /account/bookings {{ id: {} }}", id);
@@ -63,7 +70,8 @@ pub fn get_account_info(req: &mut Request) -> IronResult<Response> {
                    .from_tables("Person")
                    .filter("ID = $1")
                    .build(),
-                &[&id]).unwrap()
+               &[&id])
+        .unwrap()
         .into_iter()
         .map(AccountInfo::from)
         .last()
@@ -75,7 +83,7 @@ pub fn get_account_info(req: &mut Request) -> IronResult<Response> {
 pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
     let id = match Authorizer::authorize_request(req) {
         Ok(id) => id,
-        Err(err) => return Ok(err.into_api_response().into())
+        Err(err) => return Ok(err.into_api_response().into()),
     };
 
     let upd_info_data: UpdateAccountInfoData = match json::decode(&request_body(req)) {
@@ -96,9 +104,10 @@ pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
         if let Some(new_hash) = upd_info_data.NewPassHash {
             // Try to query user with received old_hash
             let count = conn.query(&Person::select_builder()
-                            .filter("ID = $1 and PassHash = $2")
-                            .build(),
-                        &[&id, &old_hash]).unwrap()
+                           .filter("ID = $1 and PassHash = $2")
+                           .build(),
+                       &[&id, &old_hash])
+                .unwrap()
                 .into_iter()
                 .count();
             // If count is non-zero, there password is right
@@ -108,13 +117,15 @@ pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
             } else {
                 return {
                     Ok(OldPasswordIsInvalidError::from_str("Old password is invelid")
-                        .into_api_response().into())
+                        .into_api_response()
+                        .into())
                 };
             }
         } else {
             return {
                 Ok(IncompleteDataError::from_str("Missing NewPassHash")
-                    .into_api_response().into())
+                    .into_api_response()
+                    .into())
             };
         }
     };
@@ -135,6 +146,8 @@ pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
     }
 
     use postgres::types::ToSql;
-    conn.execute(&update.build(), &values.iter().map(|s| &*s as &ToSql).collect::<Vec<&ToSql>>()[..]).unwrap();
+    conn.execute(&update.build(),
+                 &values.iter().map(|s| &*s as &ToSql).collect::<Vec<&ToSql>>()[..])
+        .unwrap();
     Ok(Response::with(StatusCode::Ok))
 }
