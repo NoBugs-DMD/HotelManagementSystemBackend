@@ -7,7 +7,7 @@ mod pool;
 pub use self::pool::get_db_connection;
 
 pub trait Insertable {
-    fn insert_query() -> String; 
+    fn insert_query() -> String;
 }
 
 pub trait Queryable {
@@ -17,4 +17,3 @@ pub trait Queryable {
 pub trait Deletable {
     fn delete_builder() -> builder::DeleteQueryBuilder;
 }
-

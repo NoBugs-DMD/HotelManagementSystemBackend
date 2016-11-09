@@ -1,10 +1,6 @@
-use hyper::header::CookiePair;
-use postgres::Connection;
 use iron::prelude::*;
-use oven::prelude::*;
 use rustc_serialize::json;
-use rustc_serialize::Encodable;
-use hyper::status::StatusCode; 
+use hyper::status::StatusCode;
 use std::io::Read;
 
 use ::proto::schema::*;
@@ -14,15 +10,16 @@ use ::db::schema::*;
 use ::db::builder::*;
 use ::db::*;
 
-pub fn get_cities_handler(req: &mut Request) -> IronResult<Response> {
+pub fn get_cities_handler(_: &mut Request) -> IronResult<Response> {
     let query = City::select_builder().build();
     let conn = get_db_connection();
 
     info!("request GET /city");
 
     let rows = conn.query(&query, &[]).unwrap();
-    let cities = rows.into_iter().map(City::from)
-                                 .collect::<Vec<City>>();
+    let cities = rows.into_iter()
+        .map(City::from)
+        .collect::<Vec<City>>();
 
     Ok(ApiResponse::Ok(cities).into())
 }
@@ -33,7 +30,7 @@ pub fn put_city_handler(req: &mut Request) -> IronResult<Response> {
 
     let new_city: City = match json::decode(&buffer) {
         Ok(city) => city,
-        Err(err) => return Ok(InvalidSchemaError::from(err).into_api_response().into())
+        Err(err) => return Ok(InvalidSchemaError::from(err).into_api_response().into()),
     };
 
     info!("request POST /city {{ {:?} }}", new_city);
@@ -43,5 +40,5 @@ pub fn put_city_handler(req: &mut Request) -> IronResult<Response> {
 
     conn.execute(&query, &[&new_city.Name]).unwrap();
 
-    Ok(Response::with(StatusCode::Ok))    
+    Ok(Response::with(StatusCode::Ok))
 }

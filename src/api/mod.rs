@@ -11,5 +11,5 @@ fn request_body(req: &mut Request) -> String {
 
     debug!("request body: {}", buffer);
 
-    buffer   
+    buffer
 }

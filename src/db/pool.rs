@@ -27,4 +27,4 @@ pub fn get_db_connection() -> r2d2::PooledConnection<PostgresConnectionManager> 
             Ok(conn) => return conn,
         }
     }
-} 
+}

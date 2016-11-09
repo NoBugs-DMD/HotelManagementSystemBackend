@@ -4,7 +4,6 @@ macro_rules! auto_queries {
         $(pub $member:ident: $member_type:ty),*
     }) => (
         #[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
-        #[allow(non_snake_case)]
         pub struct $table {
             pub ID: i32,
             $(pub $member: $member_type,)*
@@ -28,7 +27,6 @@ macro_rules! auto_queries {
         $( pub $member:ident : $member_type:ty ),*
     }) => (
         #[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
-        #[allow(non_snake_case)]
         pub struct $table {
             $(pub $member: $member_type,)*
         }

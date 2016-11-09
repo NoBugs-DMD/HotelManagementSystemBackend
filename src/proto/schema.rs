@@ -23,5 +23,5 @@ pub struct Roles {
     pub Owner: bool,
     pub Manager: bool,
     pub Cleaner: bool,
-    pub Receptionist: bool
+    pub Receptionist: bool,
 }

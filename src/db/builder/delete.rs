@@ -1,15 +1,14 @@
 use super::*;
-use super::substitute;
+use super::Substitute;
 
-const DELETE_DEFAULT_TEMPLATE: &'static str = 
-    "DELETE FROM $from_tables $where_clause;";
+const DELETE_DEFAULT_TEMPLATE: &'static str = "DELETE FROM $from_tables $where_clause;";
 
 
 #[derive(Default)]
 pub struct DeleteQueryBuilder {
-    template:     Option<String>,
-    from_tables:  Option<String>,
-    where_clause: Option<String>
+    template: Option<String>,
+    from_tables: Option<String>,
+    where_clause: Option<String>,
 }
 
 impl DeleteQueryBuilder {
@@ -38,11 +37,11 @@ impl QueryBuilder for DeleteQueryBuilder {
     }
 
     fn build(mut self) -> String {
-        let template = self.template.take().unwrap();
+        let where_clause = opt_format!(self.where_clause, "WHERE {}");
 
-        let template = substitute("$tables", template, self.from_tables.as_ref()).unwrap();
-        let template = substitute("$where_clause", template, self.where_clause.map(|w| format!("WHERE {}", w)).as_ref()).unwrap();
-        
-        template
-    }    
+        self.template.take().unwrap()
+            .substitute("$tables", opt_as_str!(self.from_tables))
+            .substitute("$where_clause", opt_as_str!(where_clause))
+            .unwrap()
+    }
 }

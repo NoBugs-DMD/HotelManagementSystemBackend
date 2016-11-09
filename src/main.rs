@@ -2,6 +2,7 @@
 #![feature(trace_macros)]
 #![feature(inclusive_range_syntax)]
 #![feature(log_syntax)]
+#![allow(non_snake_case)]
 
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate router;
@@ -37,12 +38,12 @@ fn main() {
         account_all_bookings: get    "/api/account/bookings/"     => api::account::get_bookings_handle,
         account_bookings:     get    "/api/account/bookings/:cnt" => api::account::get_bookings_handle,
     );
-    
+
     let mut chain = Chain::new(router);
 
     // TODO __CHANGE__ key and load it from non-gited file.
     chain.link(oven::new(Vec::from(&b"f8f9eaf1ecdedff5e5b749c58115441e"[..])));
-    
+
     // Get db connection from pool (will block until pool is ready)
     db::get_db_connection();
 
@@ -50,7 +51,7 @@ fn main() {
 }
 
 use std::env;
-use log::{LogRecord, LogLevelFilter};
+use log::LogLevelFilter;
 use env_logger::LogBuilder;
 
 fn init_logging() {
@@ -58,7 +59,7 @@ fn init_logging() {
     builder.filter(None, LogLevelFilter::Info);
 
     if env::var("RUST_LOG").is_ok() {
-       builder.parse(&env::var("RUST_LOG").unwrap());
+        builder.parse(&env::var("RUST_LOG").unwrap());
     }
 
     builder.init().unwrap();

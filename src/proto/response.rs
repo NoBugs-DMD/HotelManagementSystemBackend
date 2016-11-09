@@ -1,30 +1,32 @@
-use rustc_serialize::{Encodable};
+use rustc_serialize::Encodable;
 use rustc_serialize::json::{self, EncodeResult};
 use iron::prelude::*;
-use hyper::status::StatusCode; 
+use hyper::status::StatusCode;
 
 #[derive(Debug, Clone, RustcEncodable)]
-pub enum ApiResponse<D> 
+pub enum ApiResponse<D>
     where D: Encodable
 {
     Ok(D),
-    Err(i32, String)
+    Err(i32, String),
 }
 
-impl<D> ApiResponse<D> 
+impl<D> ApiResponse<D>
     where D: Encodable
 {
     pub fn to_json(&self) -> EncodeResult<String> {
         match *self {
             ApiResponse::Ok(ref data) => json::encode(&data),
-            ApiResponse::Err(ref code, ref desc) => Ok( 
-                format!("{{ \"error_code\": {}, \"description\": \"{}\" }}", code, desc)
-            )
-        }        
+            ApiResponse::Err(ref code, ref desc) => {
+                Ok(format!("{{ \"error_code\": {}, \"description\": \"{}\" }}",
+                           code,
+                           desc))
+            }
+        }
     }
 }
 
-impl<D> Into<Response> for ApiResponse<D> 
+impl<D> Into<Response> for ApiResponse<D>
     where D: Encodable
 {
     fn into(self) -> Response {

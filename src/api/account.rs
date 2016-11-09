@@ -1,23 +1,10 @@
-use std::collections::HashMap;
-use std::sync::RwLock;
-use std::sync::Arc;
-use std::borrow::Borrow;
-
 use router::Router;
-use hyper::header::CookiePair;
-use postgres::Connection;
 use iron::prelude::*;
-use oven::prelude::*;
-use params::{Params, Value, FromValue};
-use rustc_serialize::json;
-use hyper::status::StatusCode; 
-use std::io::Read;
+use params::{Params, FromValue};
 use std::str::FromStr;
 use std::i32;
 
 use ::api::authorization::Authorizer;
-use ::proto::schema::*;
-use ::proto::error::*;
 use ::proto::response::*;
 use ::db::schema::*;
 use ::db::builder::*;
@@ -43,11 +30,12 @@ pub fn get_bookings_handle(req: &mut Request) -> IronResult<Response> {
     
     let conn = get_db_connection();
     let rows = conn.query(&Booking::select_builder()
-                    .filter("ClientPersonID = $1")
-                    .limit(cnt)
-                    .offset(ofst)
-                    .build(),
-                    &[&id]).unwrap();
+        .filter("ClientPersonID = $1")
+        .limit(cnt)
+        .offset(ofst)
+        .build(),
+        &[&id]
+    ).unwrap();
     
     let bookings = rows.into_iter().map(Booking::from).collect::<Vec<Booking>>();
     Ok(ApiResponse::Ok(bookings).into())

@@ -1,3 +1,5 @@
+#[macro_use]
+mod macros;
 mod delete;
 mod select;
 
@@ -20,7 +22,7 @@ impl fmt::Display for NoSuchPatternError {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.write_str(&self.0)
     }
-} 
+}
 
 impl Error for NoSuchPatternError {
     fn description(&self) -> &str {
@@ -28,11 +30,29 @@ impl Error for NoSuchPatternError {
     }
 }
 
-fn substitute(pattern: &str, target: String, substitution: Option<&String>) -> Result<String, NoSuchPatternError> {
-    if substitution.is_none() {
-        Ok(target.replace(pattern, ""))
-    } else {
-        target.find(pattern).ok_or(NoSuchPatternError(format!("No pattern {:?} in template", pattern)))?;
-        Ok(target.replace(pattern, &substitution.unwrap()))
+use std::result;
+type Result = result::Result<String, NoSuchPatternError>;
+trait Substitute {
+    fn substitute(self, pattern: &str, substitution: Option<&str>) -> Result;
+}
+
+impl Substitute for String {
+    fn substitute(self, pattern: &str, substitution: Option<&str>) -> Result {
+        if substitution.is_none() {
+            Ok(self.replace(pattern, ""))
+        } else {
+            self.find(pattern)
+                .ok_or(NoSuchPatternError(format!("No pattern {:?} in template", pattern)))?;
+            Ok(self.replace(pattern, &substitution.unwrap()))
+        }
+    }
+}
+
+impl Substitute for Result {
+    fn substitute(self, pattern: &str, substitution: Option<&str>) -> Result {
+        match self {
+            Ok(string) => string.substitute(pattern, substitution),
+            Err(err) => Err(err),
+        }
     }
 }

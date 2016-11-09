@@ -1,6 +1,5 @@
 use postgres::rows::Row;
 use chrono::NaiveDateTime;
-use rustc_serialize::json::Json;
 
 use super::*;
 use super::builder::*;
@@ -53,7 +52,7 @@ auto_queries!(
         pub ID: i32,
         pub RuleSetID: i32,
         pub LevelName: String,
-        pub PerNight: i32 
+        pub PerNight: i32
     }
 );
 
@@ -116,7 +115,7 @@ auto_queries!(
 auto_queries!(
     pub struct Hotel {
         pub ID: i32,
-        pub OwnerPersonID: i32, 
+        pub OwnerPersonID: i32,
         pub CityID: i32,
         pub RuleSetID: i32,
         pub Name: String,
@@ -152,7 +151,7 @@ auto_queries!(
         pub ArrivalTime: NaiveDateTime,
         pub DepartureTime: NaiveDateTime,
         pub FullCost: i32,
-        pub Paid: bool 
+        pub Paid: bool
     }
 );
 

@@ -1,20 +1,20 @@
 use super::QueryBuilder;
-use super::substitute;
+use super::Substitute;
 
-const SELECT_DEFAULT_TEMPLATE: &'static str = 
-    "SELECT $cnt_b$collumns$cnt_e FROM $tables $where_clause $group_by $order_by $limit $offset;";
+const SELECT_DEFAULT_TEMPLATE: &'static str = "SELECT $cnt_b$collumns$cnt_e FROM $tables \
+                                               $where_clause $group_by $order_by $limit $offset;";
 
 #[derive(Default)]
 pub struct SelectQueryBuilder {
     template:     Option<String>,
     where_clause: Option<String>,
     collumns:     Option<String>,
-    from_tables:  Option<String>,    
+    from_tables:  Option<String>,
     group_by:     Option<String>,
     order_by:     Option<String>,
     limit:        Option<i32>,
     offset:       Option<i32>,
-    counting:     Option<bool>
+    counting:     Option<bool>,
 }
 
 impl SelectQueryBuilder {
@@ -22,7 +22,7 @@ impl SelectQueryBuilder {
         self.where_clause = Some(where_clause.to_owned());
         self
     }
-    
+
     pub fn columns(mut self, collumns: &str) -> Self {
         self.collumns = Some(collumns.to_owned());
         self
@@ -74,23 +74,28 @@ impl QueryBuilder for SelectQueryBuilder {
     }
 
     fn build(mut self) -> String {
-        let template = self.template.take().unwrap();
+        let where_clause = opt_format!(self.where_clause, "WHERE {}");
+        let group_by     = opt_format!(self.group_by, "GROUP BY {}");
+        let order_by     = opt_format!(self.order_by, "ORDER BY {}");
+        let limit        = opt_format!(self.limit, "LIMIT {}");
+        let offset       = opt_format!(self.offset, "OFFSET {}");
 
-        let template = substitute("$collumns", template, self.collumns.as_ref()).unwrap();
-        let template = substitute("$tables", template, self.from_tables.as_ref()).unwrap();
-        let template = substitute("$where_clause", template, self.where_clause.map(|w| format!("WHERE {}", w)).as_ref()).unwrap();
-        let template = substitute("$group_by", template, self.group_by.map(|g| format!("GROUP BY {}", g)).as_ref()).unwrap();
-        let template = substitute("$order_by", template, self.order_by.map(|o| format!("ORDER BY {}", o)).as_ref()).unwrap();
-        let template = substitute("$limit", template, self.limit.map(|l| format!("LIMIT {}", l)).as_ref()).unwrap();
-        let template = substitute("$offset", template, self.offset.map(|o| format!("OFFSET {}", o)).as_ref()).unwrap();
-        
-        let is_counting = self.counting.unwrap_or(false);
-        let cnt_b = if is_counting { Some(String::from("COUNT(")) } else { None };
-        let cnt_e = if is_counting { Some(String::from(")")) } else { None };
-        
-        let template = substitute("$cnt_b", template, cnt_b.as_ref()).unwrap();
-        let template = substitute("$cnt_e", template, cnt_e.as_ref()).unwrap();
+        let (cnt_b, cnt_e) = if self.counting.unwrap_or(false) {
+            (Some("COUNT("), Some(")"))
+        } else {
+            (None, None)
+        };
 
-        template
-    }    
+        self.template.take().unwrap()
+            .substitute("$collumns",     opt_as_str!(self.collumns))
+            .substitute("$tables",       opt_as_str!(self.from_tables))
+            .substitute("$where_clause", opt_as_str!(where_clause))
+            .substitute("$group_by",     opt_as_str!(group_by))
+            .substitute("$order_by",     opt_as_str!(order_by))
+            .substitute("$limit",        opt_as_str!(limit))
+            .substitute("$offset",       opt_as_str!(offset))
+            .substitute("$cnt_b",        cnt_b)    
+            .substitute("$cnt_e",        cnt_e)
+            .unwrap()
+    }
 }

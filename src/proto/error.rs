@@ -1,7 +1,6 @@
 #[derive(Debug)]
 pub enum ErrorCode {
-    OK = 0,
-    InvalidSchemaError,
+    InvalidSchemaError = 1,
     SigninError,
     SignupError,
     NotAuthorizedError,
@@ -19,11 +18,8 @@ use super::response::*;
 pub trait ApiError {
     fn code(&self) -> i32;
     fn description(&self) -> String;
-    fn into_api_response(&self) -> ApiResponse<()>{
-        ApiResponse::Err(
-            self.code(),
-            self.description()
-        )
+    fn into_api_response(&self) -> ApiResponse<()> {
+        ApiResponse::Err(self.code(), self.description())
     }
 }
 

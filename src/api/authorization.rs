@@ -8,8 +8,6 @@ use postgres::Connection;
 use iron::prelude::*;
 use oven::prelude::*;
 use rustc_serialize::json;
-use hyper::status::StatusCode; 
-use std::io::Read;
 
 use super::request_body;
 use ::proto::schema::*;
@@ -28,14 +26,14 @@ new_api_error!(NotAuthorizedError);
 pub fn signin_handler(req: &mut Request) -> IronResult<Response> {
     let signin_data: SigninData = match json::decode(&request_body(req)) {
         Ok(sd) => sd,
-        Err(json_err) => return Ok(InvalidSchemaError::from(json_err).into_api_response().into())
+        Err(json_err) => return Ok(InvalidSchemaError::from(json_err).into_api_response().into()),
     };
 
     info!("request POST /signin {{ {:?} }}", signin_data);
-    
+
     let token = match Authorizer::signin(&get_db_connection(), &signin_data) {
         Ok(token) => token,
-        Err(err) => return Ok(err.into_api_response().into())
+        Err(err) => return Ok(err.into_api_response().into()),
     };
 
     Ok(respond_with_roles_and_token(token))
@@ -44,14 +42,14 @@ pub fn signin_handler(req: &mut Request) -> IronResult<Response> {
 pub fn signup_handler(req: &mut Request) -> IronResult<Response> {
     let signup_data: SignupData = match json::decode(&request_body(req)) {
         Ok(sd) => sd,
-        Err(json_err) => return Ok(InvalidSchemaError::from(json_err).into_api_response().into())
+        Err(json_err) => return Ok(InvalidSchemaError::from(json_err).into_api_response().into()),
     };
 
     info!("request POST /signup {{ {:?} }}", signup_data);
-    
+
     let token = match Authorizer::signup(&get_db_connection(), &signup_data) {
         Ok(token) => token,
-        Err(err) => return Ok(err.into_api_response().into())
+        Err(err) => return Ok(err.into_api_response().into()),
     };
 
     Ok(respond_with_roles_and_token(token))
@@ -60,15 +58,15 @@ pub fn signup_handler(req: &mut Request) -> IronResult<Response> {
 fn respond_with_roles_and_token(token: String) -> Response {
     let roles = match Authorizer::get_roles(&get_db_connection(), &token) {
         Ok(roles) => roles,
-        Err(err) => return err.into_api_response().into()   
+        Err(err) => return err.into_api_response().into(),   
     };
 
     let mut response: Response = ApiResponse::Ok(roles).into();
     let mut cookie = CookiePair::new("token".to_string(), token.to_owned());
-    
+
     // Nulling the path to tell browser to pass cookie for whole domain
     cookie.path = Some(String::new());
-    
+
     response.set_cookie(cookie);
     response
 }
@@ -81,7 +79,7 @@ impl Authorizer {
             .build();
 
         let rows = conn.query(&query, &[&signin_data.Login, &signin_data.PassHash]).unwrap();
-        
+
         assert!(rows.len() <= 1, "Database is inconsistent");
         if rows.is_empty() {
             return Err(box SigninError::from("Login-password pair not found".to_owned()));
@@ -95,66 +93,69 @@ impl Authorizer {
     }
 
     pub fn signup(conn: &Connection, signup_data: &SignupData) -> ApiResult<Token> {
-        match conn.execute(&Person::insert_query(), 
-                           &[&signup_data.Login, &signup_data.Name, &signup_data.Email, &signup_data.PassHash]) {
+        match conn.execute(&Person::insert_query(),
+                           &[&signup_data.Login,
+                             &signup_data.Name,
+                             &signup_data.Email,
+                             &signup_data.PassHash]) {
             Ok(_) => (),
             Err(e) => return Err(box SignupError::from(format!("{}", e))),
         }
-        
+
         Self::signin(conn, &SigninData {
             Login: signup_data.Login.clone(),
-            PassHash: signup_data.PassHash.clone()
+            PassHash: signup_data.PassHash.clone(),
         })
     }
 
     pub fn authorize_request(req: &mut Request) -> ApiResult<i32> {
         let token_cookie = match req.get_cookie("token") {
             Some(tc) => tc,
-            None => return Err(box NotAuthorizedError::from("No token found in request".to_string()))
-        }; 
+            None => {
+                return Err(box NotAuthorizedError::from("No token found in request".to_string()))
+            }
+        };
 
         Self::get_id(&token_cookie.value)
-    }   
+    }
 
     pub fn get_id(token: &Token) -> ApiResult<i32> {
         TOKEN_MAP.get(token)
-                 .ok_or(box NotAuthorizedError::from("Token has expired".to_owned()))
+            .ok_or(box NotAuthorizedError::from("Token has expired".to_owned()))
     }
 
     pub fn get_roles(conn: &Connection, token: &Token) -> ApiResult<Roles> {
         let id = Self::get_id(token)?;
-        
+
         if let Some(roles) = ROLES_MAP.get(&id) {
             return Ok(roles);
         }
 
         macro_rules! query_all_with_id {
-            ($table:ident) => (
-                conn.query(&$table::select_builder()
+            ($conn:ident, $table:ident) => (
+                $conn.query(&$table::select_builder()
                                     .filter("PersonID = $1")
                                     .build(), &[&id]).unwrap();
             )
         }
 
-        let conn = get_db_connection();
-
-        let clients = query_all_with_id!(Client);
-        let owners = query_all_with_id!(Owner);
-        let managers = query_all_with_id!(Manager);
-        let cleaners = query_all_with_id!(Cleaner);
-        let receptionists = query_all_with_id!(Receptionist);
+        let clients = query_all_with_id!(conn, Client);
+        let owners = query_all_with_id!(conn, Owner);
+        let managers = query_all_with_id!(conn, Manager);
+        let cleaners = query_all_with_id!(conn, Cleaner);
+        let receptionists = query_all_with_id!(conn, Receptionist);
 
         let roles = Roles {
-            Client: !clients.is_empty(),
-            Owner:  !owners.is_empty(),
-            Manager: !managers.is_empty(),
-            Cleaner: !cleaners.is_empty(),
-            Receptionist: !receptionists.is_empty(), 
+            Client:       !clients.is_empty(),
+            Owner:        !owners.is_empty(),
+            Manager:      !managers.is_empty(),
+            Cleaner:      !cleaners.is_empty(),
+            Receptionist: !receptionists.is_empty(),
         };
 
-        ROLES_MAP.put(id, roles.clone());
+        ROLES_MAP.put(id, roles);
         Ok(roles)
-    } 
+    }
 }
 
 // Token storage
@@ -163,19 +164,17 @@ lazy_static! {
     static ref ROLES_MAP: SyncMap<i32, Roles> = SyncMap::new();
 }
 
-
 use std::hash::Hash;
 struct SyncMap<K: Eq + Hash, V> {
-    map: Arc<RwLock<HashMap<K, V>>>
+    map: Arc<RwLock<HashMap<K, V>>>,
 }
 
-impl<K, V> SyncMap<K, V> 
-    where K: Eq + Hash, V: Copy + Clone
+impl<K, V> SyncMap<K, V>
+    where K: Eq + Hash,
+          V: Copy + Clone
 {
     pub fn new() -> Self {
-        SyncMap {
-            map: Arc::new(RwLock::new(HashMap::new()))
-        }
+        SyncMap { map: Arc::new(RwLock::new(HashMap::new())) }
     }
 
     pub fn get<U: Borrow<K>>(&self, token: U) -> Option<V> {
