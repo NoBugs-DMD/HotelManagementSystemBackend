@@ -1,6 +1,7 @@
 pub mod authorization;
 pub mod city;
 pub mod account;
+pub mod booking;
 
 use iron::prelude::*;
 use std::io::Read;

@@ -8,9 +8,10 @@ GET info { ... , roles }
 POST info
 
 bookings:
-GET by_id
-PUT(new)  { ... } 
-POST(update) { ... } 
+GET booking/?hotel=id&client=id&date_from=timestamp&date_to=timestamp
+GET booking/:id
+PUT booking/
+POST booking/:id
 
 search_api:
 POST { city, arrival, departure, rating, stars, price, hotel_id }

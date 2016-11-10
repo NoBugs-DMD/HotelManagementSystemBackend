@@ -8,11 +8,14 @@ mod pool;
 pub use self::pool::get_db_connection;
 pub use self::builder::*;
 
+use postgres::types::ToSql;
+
 pub trait Insertable {
     fn insert_builder<'a>() -> builder::InsertQueryBuilder<'a>;
     fn insert_query() -> String {
         Self::insert_builder().build()
     }
+    fn insert_args(&self) -> Vec<&ToSql>;
 }
 
 pub trait Queryable {

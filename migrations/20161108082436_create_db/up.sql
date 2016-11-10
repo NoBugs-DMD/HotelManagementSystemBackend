@@ -144,7 +144,6 @@ CREATE TABLE AssignedCleaning (
 );
 
 -- Trigger to auto add registered users to Client table
-
 CREATE OR REPLACE FUNCTION auto_add_client() RETURNS TRIGGER as $emp_auto_add_client$
 DECLARE
 BEGIN
@@ -156,3 +155,49 @@ LANGUAGE 'plpgsql';
 
 CREATE TRIGGER auto_add_client AFTER INSERT ON Person
     FOR EACH ROW EXECUTE PROCEDURE auto_add_client(); 
+
+-- Insert Booking and update MaintainedBy
+CREATE OR REPLACE FUNCTION insert_booking_and_return_id(ClientPersonID int4, 
+                                                        HotelID        int4,  
+                                                        RoomNumber     int4, 
+                                                        BookingTime    timestamp, 
+                                                        ArrivalTime    timestamp, 
+                                                        DepartureTime  timestamp) 
+                                                        RETURNS int4 as $insert_booking_and_return_id$
+DECLARE
+new_id int4;
+BEGIN
+    INSERT INTO Booking 
+    VALUES(ClientPersonID, HotelID, RoomNumber, BookingTime, ArrivalTime, DepartureTime, 0, false, false) 
+    RETURNING id into new_id;
+    RETURN new_id;
+END;
+$insert_booking_and_return_id$
+LANGUAGE 'plpgsql';
+
+-- Trigger to auto calculate the cost on Booking insert
+CREATE OR REPLACE FUNCTION calculate_booking_cost() RETURNS TRIGGER as $calculate_booking_cost$
+DECLARE
+BEGIN
+    -- Get cost per-night for booked room level
+    DROP TABLE IF EXISTS per_night;
+    CREATE TEMP table per_night on commit drop
+    AS SELECT RL.PerNight FROM RoomLevel as RL, Room as R
+    WHERE R.HotelID = new.HotelID and R.RoomNumber = new.RoomNumber and R.RoomLevelID = RL.ID;
+
+    -- Check if per-night cost have not been retrieved
+    IF NOT EXISTS (SELECT * FROM per_night) then
+      RAISE EXCEPTION 'No Room or LevelID';
+    END IF;
+
+    -- Calculate number of nights
+    -- Set cost
+    new.FullCost := per_night.PerNight * EXTRACT(DAY FROM (new.ArrivalTime, new.DepartureTime)); 
+
+    RETURN new;
+END;
+$calculate_booking_cost$
+LANGUAGE 'plpgsql';
+
+CREATE TRIGGER calculate_booking_cost BEFORE INSERT ON Booking
+    FOR EACH ROW EXECUTE PROCEDURE calculate_booking_cost(); 

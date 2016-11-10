@@ -1,4 +1,5 @@
 use postgres::rows::Row;
+use postgres::types::ToSql;
 use chrono::NaiveDateTime;
 
 use super::*;
@@ -155,7 +156,7 @@ auto_queries!(
 );
 
 auto_queries!(
-    pub struct MaitainedBy {
+    pub struct MaintainedBy {
         pub BookingID: i32,
         pub ReceptionistPersonID: i32,
         pub MaintainedAt: NaiveDateTime

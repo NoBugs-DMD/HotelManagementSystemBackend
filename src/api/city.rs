@@ -3,6 +3,7 @@ use rustc_serialize::json;
 use hyper::status::StatusCode;
 use std::io::Read;
 
+use super::request_body;
 use ::proto::schema::*;
 use ::proto::response::*;
 use ::proto::error::*;
@@ -24,10 +25,7 @@ pub fn get_cities_handler(_: &mut Request) -> IronResult<Response> {
 }
 
 pub fn put_city_handler(req: &mut Request) -> IronResult<Response> {
-    let mut buffer = String::with_capacity(32);
-    req.body.read_to_string(&mut buffer).unwrap();
-
-    let new_city: City = match json::decode(&buffer) {
+    let new_city: City = match json::decode(&request_body(req)) {
         Ok(city) => city,
         Err(err) => return Ok(InvalidSchemaError::from(err).into_api_response().into()),
     };

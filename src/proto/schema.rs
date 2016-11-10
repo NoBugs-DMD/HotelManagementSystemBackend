@@ -1,8 +1,5 @@
 use rustc_serialize::json::DecoderError;
-
-new_api_error!(InvalidSchemaError);
-new_api_error!(IncompleteDataError);
-api_error_gen_from_error!(DecoderError, InvalidSchemaError);
+use chrono::NaiveDateTime;
 
 #[derive(Debug, RustcDecodable)]
 pub struct SigninData {
@@ -33,4 +30,13 @@ pub struct UpdateAccountInfoData {
     pub NewEmail: Option<String>,
     pub OldPassHash: Option<String>,
     pub NewPassHash: Option<String>,
+}
+
+#[derive(Debug, RustcDecodable)]
+pub struct NewBooking {
+    pub ClientPersonID: Option<i32>,
+    pub HotelID: Option<i32>,
+    pub RoomNumber: i32,
+    pub ArrivalTime: NaiveDateTime,
+    pub DepartureTime: NaiveDateTime,
 }

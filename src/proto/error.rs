@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use rustc_serialize::json;
 
 #[derive(Debug)]
 pub enum ErrorCode {
@@ -8,7 +9,20 @@ pub enum ErrorCode {
     SignupError,
     NotAuthorizedError,
     OldPasswordIsInvalidError,
+    NotFoundError,
 }
+
+new_api_error!(InvalidSchemaError);
+new_api_error!(IncompleteDataError);
+new_api_error!(SigninError);
+new_api_error!(SignupError);
+new_api_error!(NotAuthorizedError);
+new_api_error!(OldPasswordIsInvalidError);
+new_api_error!(NotFoundError);
+
+api_error_gen_from_error!(
+    json::DecoderError, InvalidSchemaError
+);
 
 impl Into<i32> for ErrorCode {
     fn into(self) -> i32 {
@@ -24,53 +38,5 @@ pub trait ApiError {
     fn description(&self) -> Cow<'static, str>;
     fn into_api_response(&self) -> ApiResponse<()> {
         ApiResponse::Err(self.code(), self.description())
-    }
-}
-
-macro_rules! new_api_error {
-    ($ident:ident) => {
-        #[derive(Debug, Clone)]
-        pub struct $ident {
-            description: ::std::borrow::Cow<'static, str>,
-        }
-
-        impl ::std::fmt::Display for $ident {
-            fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
-                write!(fmt, "description: \"{}\"", &self.description)
-            }
-        }
-
-        impl ::proto::error::ApiError for $ident {
-            fn code(&self) -> i32 {
-                ::proto::error::ErrorCode::$ident as i32
-            }
-
-            fn description(&self) -> ::std::borrow::Cow<'static, str> {
-                self.description.clone()
-            }
-        }
-
-        #[allow(dead_code)]
-        impl $ident {  
-            pub fn from_str<U>(desc: U) -> Self 
-                where U: Into<::std::borrow::Cow<'static, str>>
-            {
-                Self {
-                    description: desc.into()
-                }
-            }
-        }
-    }
-}
-
-macro_rules! api_error_gen_from_error {
-    ($from:ty, $to:ident) => {
-        impl From<$from> for $to {
-            fn from(raw: DecoderError) -> Self {
-                $to {
-                    description: ::std::borrow::Cow::from(format!("{}", raw))
-                }
-            }
-        }
     }
 }

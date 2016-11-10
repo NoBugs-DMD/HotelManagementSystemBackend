@@ -18,10 +18,6 @@ use ::db::*;
 
 pub type Token = String;
 
-new_api_error!(SigninError);
-new_api_error!(SignupError);
-new_api_error!(NotAuthorizedError);
-
 pub fn signin_handler(req: &mut Request) -> IronResult<Response> {
     let signin_data: SigninData = match json::decode(&request_body(req)) {
         Ok(sd) => sd,

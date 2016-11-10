@@ -15,7 +15,6 @@ use ::db::schema::*;
 use ::db::schemaext::*;
 use ::db::*;
 
-new_api_error!(OldPasswordIsInvalidError);
 
 pub fn get_bookings_handle(req: &mut Request) -> IronResult<Response> {
     let id = match Authorizer::authorize_request(req) {

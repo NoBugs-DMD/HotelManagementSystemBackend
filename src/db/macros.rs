@@ -73,6 +73,14 @@ macro_rules! auto_queries_impls {
                     .table(stringify!($member))
                 )*
             }
+
+            fn insert_args(&self) -> Vec<&ToSql> {
+                vec![
+                    $(
+                        &self.$member,
+                    )*
+                ]
+            }
         }
     )
 }

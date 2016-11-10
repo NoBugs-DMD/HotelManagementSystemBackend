@@ -41,16 +41,3 @@ impl<D> Into<Response> for ApiResponse<D>
         response
     }
 }
-
-#[macro_export]
-macro_rules! data_into_api_response {
-    ($ty:ty) => {
-        impl Into<::response::ApiResponse<$ty>> for $ty {
-            fn into(self) -> ::response::ApiResponse<$ty> {
-                ::response::ApiResponse::Ok {
-                    data: self
-                }
-            }
-        }
-    }
-}

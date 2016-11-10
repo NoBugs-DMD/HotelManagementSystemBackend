@@ -21,10 +21,4 @@ log = "*"
 env_logger = "*"
 
 [profile.dev]
-opt-level = 0      
-debug = true       
-rpath = false      
-lto = false        
-debug-assertions = true
-codegen-units = 4
-panic = 'unwind' 
+codegen-units = 4 
