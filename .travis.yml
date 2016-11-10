@@ -3,3 +3,5 @@ cache: cargo
 
 rust:
   - nightly
+
+script: ./.travis_script.sh
