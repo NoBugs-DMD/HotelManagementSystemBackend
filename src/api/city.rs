@@ -1,10 +1,8 @@
 use iron::prelude::*;
 use rustc_serialize::json;
 use hyper::status::StatusCode;
-use std::io::Read;
 
 use super::request_body;
-use ::proto::schema::*;
 use ::proto::response::*;
 use ::proto::error::*;
 use ::db::schema::*;

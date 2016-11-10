@@ -1,4 +1,3 @@
-use rustc_serialize::json::DecoderError;
 use chrono::NaiveDateTime;
 
 #[derive(Debug, RustcDecodable)]
@@ -15,7 +14,7 @@ pub struct SignupData {
     pub PassHash: String,
 }
 
-#[derive(Debug, Copy, Clone, RustcEncodable)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, RustcEncodable, RustcDecodable)]
 pub struct Roles {
     pub Client: bool,
     pub Owner: bool,

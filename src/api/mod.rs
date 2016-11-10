@@ -3,6 +3,9 @@ pub mod city;
 pub mod account;
 pub mod booking;
 
+#[cfg(test)]
+mod tests;
+
 use iron::prelude::*;
 use std::io::Read;
 

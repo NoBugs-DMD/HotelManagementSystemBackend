@@ -48,7 +48,7 @@ impl<'a> QueryBuilder<'a> for DeleteQueryBuilder<'a> {
         let where_clause = opt_format!(self.where_clause, "WHERE {}");
 
         self.template
-            .substitute("$tables", self.from_tables)
+            .substitute("$from_tables", self.from_tables)
             .substitute("$where_clause", where_clause)
             .unwrap()
             .into_owned()

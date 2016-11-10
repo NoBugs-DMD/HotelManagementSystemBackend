@@ -1,7 +1,6 @@
 use super::QueryBuilder;
 use super::Substitute;
 use std::borrow::Cow;
-use std::char;
 
 const UPDATE_DEFAULT_TEMPLATE: &'static str = "UPDATE $table SET $columns $where_clause;";
 
@@ -64,8 +63,6 @@ impl<'a> QueryBuilder<'a> for UpdateQueryBuilder<'a> {
             let mut columns = String::with_capacity(len * 10);
             for (i, column) in self.columns.into_iter().enumerate() {
                 columns.push_str(&column);
-                columns.push_str("=$");
-                columns.push(char::from_digit((i + 1) as u32, 10).unwrap());
                 if i < len - 1 {
                     columns.push(',');
                 }

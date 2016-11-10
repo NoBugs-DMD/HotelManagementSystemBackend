@@ -20,5 +20,8 @@ dotenv = "*"
 log = "*"
 env_logger = "*"
 
+[dev-dependencies]
+rand = "*"
+
 [profile.dev]
 codegen-units = 4 

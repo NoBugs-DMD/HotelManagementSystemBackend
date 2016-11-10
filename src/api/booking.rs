@@ -8,7 +8,6 @@ use iron::prelude::*;
 use router::Router;
 use rustc_serialize::json;
 use hyper::status::StatusCode;
-use std::io::Read;
 
 use super::request_body;
 use ::api::authorization::*;
@@ -30,6 +29,8 @@ pub fn get_booking_by_id_handler(req: &mut Request) -> IronResult<Response> {
         .unwrap()
         .find("id")
         .unwrap();
+
+    info!("request GET /api/booking/{} {{ id: {} }}", booking_id, id);
 
     let conn = get_db_connection();
 
@@ -86,6 +87,8 @@ pub fn put_booking_handler(req: &mut Request) -> IronResult<Response> {
         Ok(id) => id,
         Err(err) => return Ok(err.into_api_response().into()),
     };
+
+    info!("request PUT /api/booking/ {{ id: {}, {:?} }}", id, new_booking);
 
     let conn = get_db_connection();
 

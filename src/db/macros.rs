@@ -70,7 +70,7 @@ macro_rules! auto_queries_impls {
                 InsertQueryBuilder::default()
                     .table(stringify!($table))
                 $(
-                    .table(stringify!($member))
+                    .set(stringify!($member))
                 )*
             }
 

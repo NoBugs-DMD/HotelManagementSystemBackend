@@ -4,6 +4,7 @@
 #![feature(log_syntax)]
 #![allow(non_snake_case)]
 
+#[cfg(test)] extern crate rand;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate router;
 #[macro_use] extern crate log;
@@ -39,6 +40,8 @@ fn main() {
         account_bookings:     get    "/api/account/bookings/:cnt" => api::account::get_bookings_handle,
         account_info:         get    "/api/account/"              => api::account::get_account_info,
         update_account_info:  post   "/api/account/"              => api::account::update_account_info,
+        get_bookings_by_id:   get    "/api/booking/:id"           => api::booking::get_booking_by_id_handler,
+        put_booking:          put    "/api/booking/"              => api::booking::put_booking_handler,
     );
 
     let mut chain = Chain::new(router);

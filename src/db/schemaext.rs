@@ -11,7 +11,6 @@ auto_struct_from_row!(
 
 pub mod procedure {
     use postgres::Connection;
-    use postgres::types::{FromSql, ToSql};
     use chrono::NaiveDateTime;
 
     pub fn insert_booking(conn: &Connection,
