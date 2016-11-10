@@ -1,3 +1,5 @@
+dist: trusty
+sudo: require
 language: rust
 cache: cargo
 
@@ -5,3 +7,12 @@ rust:
   - nightly
 
 script: ./.travis_script.sh
+
+before_script:
+  - sudo /etc/init.d/postgresql stop
+  - sudo /etc/init.d/postgresql start 9.5
+  - which diesel || cargo install diesel_cli --force
+  - export PATH="$PATH:/home/travis/.cargo/bin"
+  - echo "DATABASE_URL=postgres://postgres@localhost/nobugs" > .env
+  - diesel database setup
+  - diesel migration run

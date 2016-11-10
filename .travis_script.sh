@@ -1,6 +1,6 @@
 #!/bin/bash
 cargo build &&
 cargo run &
-sleep 1;
-cargo test;
-killall hms_api
+while [[ ! `pidof hms_api` ]]; do sleep 1; done
+cargo test &&
+killall hms_api 
