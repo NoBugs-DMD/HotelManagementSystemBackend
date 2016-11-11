@@ -34,25 +34,37 @@ pub trait Updatable {
 mod tests {
     use ::db::schema::*;
     use ::db::*;
+    use rand;
+
+    fn random_str() -> String {
+        use rand::AsciiGenerator;
+        use rand::Rng;
+
+        rand::thread_rng()
+            .gen_ascii_chars()
+            .take(10)
+            .collect()
+    }
 
     #[test]
     fn auto_insert() {
         let conn = get_db_connection();
+        let name = random_str();
 
         // Insert city with builder
         conn.execute(&City::insert_builder()
                 .build(),
-              &[&"insert_test_city"])
+              &[&name])
             .unwrap();
 
         // Check insertion
-        let cnt = conn.query("SELECT FROM City WHERE Name=$1", &[&"insert_test_city"])
+        let cnt = conn.query("SELECT FROM City WHERE Name=$1", &[&name])
             .unwrap()
             .into_iter()
             .count();
 
         // Cleanup
-        conn.execute("DELETE FROM City WHERE Name=$1;", &[&"insert_test_city"])
+        conn.execute("DELETE FROM City WHERE Name=$1;", &[&name])
             .unwrap();
         
         assert_eq!(cnt, 1);
@@ -61,22 +73,23 @@ mod tests {
     #[test]
     fn auto_select() {
         let conn = get_db_connection();
+        let name = random_str();
 
         // Insert city
-        conn.execute("INSERT INTO City (Name) VALUES ($1);", &[&"select_test_city"])
+        conn.execute("INSERT INTO City (Name) VALUES ($1);", &[&name])
             .unwrap();
 
         // Select with builder
         let cnt = conn.query(&City::select_builder()
                       .filter("Name=$1")
                       .build(),
-                    &[&"select_test_city"])
+                    &[&name])
             .unwrap()
             .into_iter()
             .count();
 
         // Cleanup
-        conn.execute("DELETE FROM City WHERE Name=$1;", &[&"select_test_city"])
+        conn.execute("DELETE FROM City WHERE Name=$1;", &[&name])
             .unwrap();
 
         assert_eq!(cnt, 1);
@@ -85,26 +98,27 @@ mod tests {
     #[test]
     fn auto_delete() {
         let conn = get_db_connection();
+        let name = random_str();
 
         // Insert city
-        conn.execute("INSERT INTO City (Name) VALUES ($1);", &[&"delete_test_city"])
+        conn.execute("INSERT INTO City (Name) VALUES ($1);", &[&name])
             .unwrap();
 
         // Delete with builder
         conn.execute(&City::delete_builder()
                       .filter("Name=$1")
                       .build(),
-                    &[&"delete_test_city"])
+                    &[&name])
             .unwrap();
 
         // Check deletion
-        let cnt = conn.query("SELECT FROM City WHERE Name=$1", &[&"delete_test_city"])
+        let cnt = conn.query("SELECT FROM City WHERE Name=$1", &[&name])
             .unwrap()
             .into_iter()
             .count();
 
         // Cleanup
-        conn.execute("DELETE FROM City WHERE Name=$1;", &[&"delete_test_city"])
+        conn.execute("DELETE FROM City WHERE Name=$1;", &[&name])
             .unwrap();
 
         assert_eq!(cnt, 0);
@@ -113,29 +127,33 @@ mod tests {
     #[test]
     fn auto_update() {
         let conn = get_db_connection();
+        let name = random_str();
+        let new_name = random_str();
 
         // Insert city
-        conn.execute("INSERT INTO City (Name) VALUES ($1);", &[&"update_test_city"])
+        conn.execute("INSERT INTO City (Name) VALUES ($1);", &[&name])
             .unwrap();
 
         // Update with builder
-        conn.execute(&City::update_builder()
-                      .filter("Name=$1")
-                      .set("Name=$2")
-                      .build(),
-                    &[&"update_test_city", &"update_test_city2"])
+        let query = City::update_builder()
+                      .filter(format!("Name='{}'", name))
+                      .set("Name")
+                      .build();
+        println!("query: {:?}", query);
+        conn.execute(&query,
+                    &[&new_name])
             .unwrap();
 
         // Check updation
-        let cnt = conn.query("SELECT FROM City WHERE Name=$1", &[&"update_test_city2"])
+        let cnt = conn.query("SELECT FROM City WHERE Name=$1", &[&new_name])
             .unwrap()
             .into_iter()
             .count();
 
         // Cleanup
-        conn.execute("DELETE FROM City WHERE Name=$1;", &[&"update_test_city"])
+        conn.execute("DELETE FROM City WHERE Name=$1;", &[&name])
             .unwrap();
-        conn.execute("DELETE FROM City WHERE Name=$1;", &[&"update_test_city2"])
+        conn.execute("DELETE FROM City WHERE Name=$1;", &[&new_name])
             .unwrap();
 
         assert_eq!(cnt, 1);

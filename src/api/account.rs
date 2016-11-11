@@ -61,7 +61,7 @@ pub fn get_account_info(req: &mut Request) -> IronResult<Response> {
         Err(err) => return Ok(err.into_api_response().into()),
     };
 
-    info!("request GET /account/bookings {{ id: {} }}", id);
+    info!("request GET /account/ {{ id: {} }}", id);
 
     let conn = get_db_connection();
     let info = conn.query(&Client::select_builder()
@@ -95,12 +95,12 @@ pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
     let conn = get_db_connection();
 
     // Vector to store values that need an update
-    let mut update = Person::update_builder();
+    let mut update = Person::update_builder().filter(format!("ID={}", id));
     let mut values = Vec::with_capacity(3);
 
     // If user wants to update password, both OldPassHash and NewPassHash must be set
-    if let Some(old_hash) = upd_info_data.OldPassHash {
-        if let Some(new_hash) = upd_info_data.NewPassHash {
+    if let Some(new_hash) = upd_info_data.NewPassHash {
+        if let Some(old_hash) = upd_info_data.OldPassHash {
             // Try to query user with received old_hash
             let count = conn.query(&Person::select_builder()
                            .filter("ID = $1 and PassHash = $2")
@@ -115,14 +115,14 @@ pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
                 update = update.set("PassHash")
             } else {
                 return {
-                    Ok(OldPasswordIsInvalidError::from_str("Old password is invelid")
+                    Ok(OldPasswordIsInvalidError::from_str("Old password is invalid")
                         .into_api_response()
                         .into())
                 };
             }
         } else {
             return {
-                Ok(IncompleteDataError::from_str("Missing NewPassHash")
+                Ok(IncompleteDataError::from_str("Missing OldPassHash")
                     .into_api_response()
                     .into())
             };

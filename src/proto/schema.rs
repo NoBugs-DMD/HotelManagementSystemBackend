@@ -23,12 +23,17 @@ pub struct Roles {
     pub Receptionist: bool,
 }
 
-#[derive(Debug, RustcDecodable)]
+#[derive(Debug, RustcEncodable, RustcDecodable)]
 pub struct UpdateAccountInfoData {
     pub NewName: Option<String>,
     pub NewEmail: Option<String>,
     pub OldPassHash: Option<String>,
     pub NewPassHash: Option<String>,
+}
+
+#[derive(Debug, RustcDecodable)]
+pub struct NewCity {
+    pub Name: String,
 }
 
 #[derive(Debug, RustcDecodable)]

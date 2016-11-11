@@ -5,6 +5,7 @@ use hyper::status::StatusCode;
 use super::request_body;
 use ::proto::response::*;
 use ::proto::error::*;
+use ::proto::schema::NewCity;
 use ::db::schema::*;
 use ::db::*;
 
@@ -23,7 +24,7 @@ pub fn get_cities_handler(_: &mut Request) -> IronResult<Response> {
 }
 
 pub fn put_city_handler(req: &mut Request) -> IronResult<Response> {
-    let new_city: City = match json::decode(&request_body(req)) {
+    let new_city: NewCity = match json::decode(&request_body(req)) {
         Ok(city) => city,
         Err(err) => return Ok(InvalidSchemaError::from(err).into_api_response().into()),
     };

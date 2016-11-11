@@ -1,18 +1,15 @@
 use hyper;
-use hyper::header::SetCookie;
+use hyper::client::RequestBuilder;
+use hyper::header::{Cookie, SetCookie, CookiePair};
 use hyper::status::StatusCode;
 use rustc_serialize::json;
 use rand;
 
+use super::random_str;
 use super::response_body;
 use ::proto::schema::*;
 use ::db::schema::*;
 use ::db::*;
-
-fn random() -> u32 {
-    use rand::Rng;
-    rand::thread_rng().next_u32()
-}
 
 #[test]
 pub fn signup() {
@@ -21,10 +18,10 @@ pub fn signup() {
 
 #[test]
 fn signin() {
-    let login = format!("{}", random());
-    let name =  format!("{}", random());
-    let email = format!("{}", random());
-    let passhash = format!("{}", random());
+    let login = format!("{}", random_str());
+    let name =  format!("{}", random_str());
+    let email = format!("{}", random_str());
+    let passhash = format!("{}", random_str());
 
     get_db_connection().execute(&Person::insert_query(), &Person {
         ID:       0,
@@ -37,6 +34,21 @@ fn signin() {
 
     signin_with(&login, &passhash);
 }
+
+pub trait SignedRequest {
+    fn sign(self, token: String) -> Self;
+} 
+
+impl<'a> SignedRequest for RequestBuilder<'a> {
+    fn sign(self, token: String) -> RequestBuilder<'a> {
+        self.header(
+            Cookie(vec![
+                CookiePair::new("token".to_owned(), token),
+            ])
+        )
+    }
+}
+
 
 pub fn signin_with(login: &str, passwd: &str) -> (String, Roles) {
     let client = hyper::Client::new();
@@ -63,11 +75,11 @@ pub fn signin_with(login: &str, passwd: &str) -> (String, Roles) {
     (token.value.to_owned(), roles)
 }
 
-pub fn signup_random() -> String {
+pub fn signup_with(login: &str, name: &str, email: &str, passhash: &str) -> String {
     let client = hyper::Client::new();
     let mut res = client.post("http://localhost:8080/api/signup/")
         .body(&format!("{{ \"Login\":\"{}\", \"Name\":\"{}\", \"Email\":\"{}\", \
-                 \"PassHash\":\"{}\"}}", random(), random(), random(), random()))
+                 \"PassHash\":\"{}\"}}", login, name, email, passhash))
         .send()
         .unwrap();
     
@@ -94,4 +106,8 @@ pub fn signup_random() -> String {
     });
 
     token.value.to_owned()
+}
+
+pub fn signup_random() -> String {
+    signup_with(&random_str(), &random_str(), &random_str(), &random_str())    
 }
