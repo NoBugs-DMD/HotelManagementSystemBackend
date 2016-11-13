@@ -32,12 +32,31 @@ macro_rules! auto_struct {
         pub struct $table {
             $(pub $member: $member_type,)*
         }
+
+        #[allow(dead_code)]
+        impl $table {
+            pub fn new($($member: $member_type,)*) -> $table {
+                $table {
+                    $($member: $member,)*
+                }
+            }
+        }
     );
     ($table:ident id, $($member:ident $member_type:ty)*) => (
         #[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
         pub struct $table {
             pub ID: i32,
             $(pub $member: $member_type,)*
+        }
+
+        #[allow(dead_code)]
+        impl $table {
+            pub fn new($($member: $member_type,)*) -> $table {
+                $table {
+                    ID: -1,
+                    $($member: $member,)*
+                }
+            }
         }
     );
 }

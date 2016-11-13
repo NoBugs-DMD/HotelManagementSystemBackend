@@ -116,8 +116,9 @@ auto_queries!(
     pub struct Hotel {
         pub ID: i32,
         pub OwnerPersonID: i32,
-        pub CityID: i32,
         pub RuleSetID: i32,
+        pub CityID: i32,
+        pub PhotoSetID: Option<i32>,
         pub Name: String,
         pub Description: String,
         pub Rating: Option<i32>,

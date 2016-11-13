@@ -2,6 +2,7 @@ mod account;
 mod authorization;
 mod booking;
 mod city;
+mod hotel;
 
 use hyper::client::response::Response;
 use std::io::Read;

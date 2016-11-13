@@ -3,6 +3,7 @@ use router::Router;
 use hyper::status::StatusCode;
 use iron::prelude::*;
 use params::{Params, FromValue};
+use postgres::types::ToSql;
 use std::str::FromStr;
 use std::i32;
 
@@ -16,11 +17,10 @@ use ::db::schemaext::*;
 use ::db::*;
 
 
-pub fn get_bookings_handle(req: &mut Request) -> IronResult<Response> {
-    let id = match Authorizer::authorize_request(req) {
-        Ok(id) => id,
-        Err(err) => return Ok(err.into_api_response().into()),
-    };
+pub fn get_bookings(req: &mut Request) -> IronResult<Response> {
+    let conn = get_db_connection();
+
+    let client = authorize!(conn, req);
 
     let ofst = req.get_ref::<Params>()
         .unwrap()
@@ -36,17 +36,16 @@ pub fn get_bookings_handle(req: &mut Request) -> IronResult<Response> {
         .unwrap_or(i32::MAX);
 
     info!("request GET /account/bookings {{ id: {}, cnt: {}, ofst: {} }}",
-          id,
+          client.id,
           cnt,
           ofst);
 
-    let conn = get_db_connection();
     let bookings = conn.query(&Booking::select_builder()
                    .filter("ClientPersonID = $1")
                    .limit(cnt)
                    .offset(ofst)
                    .build(),
-               &[&id])
+               &[&client.id])
         .unwrap()
         .into_iter()
         .map(Booking::from)
@@ -56,20 +55,17 @@ pub fn get_bookings_handle(req: &mut Request) -> IronResult<Response> {
 }
 
 pub fn get_account_info(req: &mut Request) -> IronResult<Response> {
-    let id = match Authorizer::authorize_request(req) {
-        Ok(id) => id,
-        Err(err) => return Ok(err.into_api_response().into()),
-    };
-
-    info!("request GET /account/ {{ id: {} }}", id);
-
     let conn = get_db_connection();
+    let client = authorize!(conn, req);
+
+    info!("request GET /account/ {{ id: {} }}", client.id);
+
     let info = conn.query(&Client::select_builder()
                    .columns("ID,Login,Name,Email")
                    .from_tables("Person")
                    .filter("ID = $1")
                    .build(),
-               &[&id])
+               &[&client.id])
         .unwrap()
         .into_iter()
         .map(AccountInfo::from)
@@ -80,32 +76,24 @@ pub fn get_account_info(req: &mut Request) -> IronResult<Response> {
 }
 
 pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
-    let id = match Authorizer::authorize_request(req) {
-        Ok(id) => id,
-        Err(err) => return Ok(err.into_api_response().into()),
-    };
-
-    let upd_info_data: UpdateAccountInfoData = match json::decode(&request_body(req)) {
-        Ok(data) => data,
-        Err(err) => return Ok(InvalidSchemaError::from(err).into_api_response().into()),
-    };
+    let conn = get_db_connection();
+    let client = authorize!(conn, req);
+    let upd_info_data: UpdateAccountInfoData = decode_body!(req);
 
     info!("request POST /account/ {{ {:?} }}", upd_info_data);
 
-    let conn = get_db_connection();
-
     // Vector to store values that need an update
-    let mut update = Person::update_builder().filter(format!("ID={}", id));
-    let mut values = Vec::with_capacity(3);
+    let mut update = Person::update_builder().filter(format!("ID={}", client.id));
+    let mut values: Vec<&ToSql> = Vec::with_capacity(3);
 
     // If user wants to update password, both OldPassHash and NewPassHash must be set
-    if let Some(new_hash) = upd_info_data.NewPassHash {
-        if let Some(old_hash) = upd_info_data.OldPassHash {
+    if let Some(new_hash) = upd_info_data.NewPassHash.as_ref() {
+        if let Some(old_hash) = upd_info_data.OldPassHash.as_ref() {
             // Try to query user with received old_hash
             let count = conn.query(&Person::select_builder()
                            .filter("ID = $1 and PassHash = $2")
                            .build(),
-                       &[&id, &old_hash])
+                       &[&client.id, &old_hash])
                 .unwrap()
                 .into_iter()
                 .count();
@@ -129,14 +117,14 @@ pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
         }
     };
 
-    if let Some(new_name) = upd_info_data.NewName {
-        values.push(new_name);
+    if let Some(new_name) = upd_info_data.NewName.as_ref() {
         update = update.set("Name");
+        values.push(new_name);
     }
 
-    if let Some(new_email) = upd_info_data.NewEmail {
-        values.push(new_email);
+    if let Some(new_email) = upd_info_data.NewEmail.as_ref() {
         update = update.set("Email");
+        values.push(new_email);
     }
 
     // Early exit if we got empty json
@@ -144,9 +132,8 @@ pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
         return Ok(Response::with(StatusCode::Ok));
     }
 
-    use postgres::types::ToSql;
-    conn.execute(&update.build(),
-                 &values.iter().map(|s| &*s as &ToSql).collect::<Vec<&ToSql>>()[..])
+    conn.execute(&update.build(), &values)
         .unwrap();
+        
     Ok(Response::with(StatusCode::Ok))
 }

@@ -18,7 +18,7 @@ use ::db::*;
 
 pub type Token = String;
 
-pub fn signin_handler(req: &mut Request) -> IronResult<Response> {
+pub fn signin(req: &mut Request) -> IronResult<Response> {
     let signin_data: SigninData = match json::decode(&request_body(req)) {
         Ok(sd) => sd,
         Err(json_err) => return Ok(InvalidSchemaError::from(json_err).into_api_response().into()),
@@ -34,7 +34,7 @@ pub fn signin_handler(req: &mut Request) -> IronResult<Response> {
     Ok(respond_with_roles_and_token(token))
 }
 
-pub fn signup_handler(req: &mut Request) -> IronResult<Response> {
+pub fn signup(req: &mut Request) -> IronResult<Response> {
     let signup_data: SignupData = match json::decode(&request_body(req)) {
         Ok(sd) => sd,
         Err(json_err) => return Ok(InvalidSchemaError::from(json_err).into_api_response().into()),
@@ -66,6 +66,11 @@ fn respond_with_roles_and_token(token: String) -> Response {
     response
 }
 
+pub struct Authorized {
+    pub id: i32,
+    pub roles: Roles
+}
+
 pub struct Authorizer;
 impl Authorizer {
     pub fn signin(conn: &Connection, signin_data: &SigninData) -> ApiResult<Token> {
@@ -83,6 +88,7 @@ impl Authorizer {
         let person = Person::from(rows.get(0));
         let token = person.ID.to_string();
         TOKEN_MAP.put(token.clone(), person.ID);
+
 
         Ok(token)
     }
@@ -103,7 +109,7 @@ impl Authorizer {
         })
     }
 
-    pub fn authorize_request(req: &mut Request) -> ApiResult<i32> {
+    pub fn authorize_request(conn: &Connection, req: &mut Request) -> ApiResult<Authorized> {
         let token_cookie = match req.get_cookie("token") {
             Some(tc) => tc,
             None => {
@@ -111,44 +117,71 @@ impl Authorizer {
             }
         };
 
-        Self::get_id(&token_cookie.value)
+        Ok(Authorized {
+            id: Self::get_id(&token_cookie.value)?,
+            roles: Self::get_roles(conn, &token_cookie.value)? 
+        })
     }
 
-    pub fn get_id(token: &str) -> ApiResult<i32> {
+    fn get_id(token: &str) -> ApiResult<i32> {
         TOKEN_MAP.get(token)
             .ok_or(box NotAuthorizedError::from_str("Token has expired"))
     }
 
-    pub fn get_roles(conn: &Connection, token: &str) -> ApiResult<Roles> {
+    fn get_roles(conn: &Connection, token: &str) -> ApiResult<Roles> {
         let id = Self::get_id(token)?;
-
-        if let Some(roles) = ROLES_MAP.get(&id) {
-            return Ok(roles);
-        }
 
         macro_rules! query_all_with_id {
             ($conn:ident, $table:ident) => (
                 $conn.query(&$table::select_builder()
                                     .filter("PersonID = $1")
-                                    .build(), &[&id]).unwrap();
+                                    .build(), &[&id]).unwrap()
             )
         }
 
-        let clients = query_all_with_id!(conn, Client);
-        let owners = query_all_with_id!(conn, Owner);
-        let managers = query_all_with_id!(conn, Manager);
-        let cleaners = query_all_with_id!(conn, Cleaner);
-        let receptionists = query_all_with_id!(conn, Receptionist);
+        let owner = !query_all_with_id!(conn, Owner).is_empty();
+        let manager = !query_all_with_id!(conn, Manager).is_empty();
+        let cleaner = !query_all_with_id!(conn, Cleaner).is_empty();
+        let receptionist = !query_all_with_id!(conn, Receptionist).is_empty();
 
-        let roles = Roles {
-            Client:       !clients.is_empty(),
-            Owner:        !owners.is_empty(),
-            Manager:      !managers.is_empty(),
-            Cleaner:      !cleaners.is_empty(),
-            Receptionist: !receptionists.is_empty(),
+        let owned_hotels = if owner {
+            Some(conn.query(&Hotel::select_builder()
+                               .columns("ID")
+                               .filter("OwnerPersonID = $1")
+                               .build(),
+                            &[&id])
+            .unwrap()
+            .into_iter()
+            .map(|row| row.get::<_, i32>("ID"))
+            .collect())
+        } else {
+            None
         };
 
-        ROLES_MAP.put(id, roles);
+        let employed_in = if manager || cleaner || receptionist {
+            Some(conn.query(&EmployedIn::select_builder()
+                              .columns("HotelID")
+                              .filter("PersonID = $1")
+                              .build(),
+                            &[&id])
+            .unwrap()
+            .into_iter()
+            .map(|row| row.get::<_, i32>("HotelID"))
+            .collect())
+        } else {
+            None
+        };
+
+        let roles = Roles {
+            ID:           id,
+            Owner:        owner, 
+            Owns:         owned_hotels,
+            Manager:      manager,
+            Cleaner:      cleaner,
+            Receptionist: receptionist,
+            EmployedIn:   employed_in,
+        };
+
         Ok(roles)
     }
 }
@@ -156,7 +189,7 @@ impl Authorizer {
 // Token storage
 lazy_static! {
     static ref TOKEN_MAP: SyncMap<Token, i32> = SyncMap::new();
-    static ref ROLES_MAP: SyncMap<i32, Roles> = SyncMap::new();
+   // static ref ROLES_MAP: SyncMap<i32, Roles> = SyncMap::new();
 }
 
 use std::hash::Hash;
@@ -166,7 +199,7 @@ struct SyncMap<K: Eq + Hash, V> {
 
 impl<K, V> SyncMap<K, V>
     where K: Eq + Hash,
-          V: Copy + Clone
+          V: Clone
 {
     pub fn new() -> Self {
         SyncMap { map: Arc::new(RwLock::new(HashMap::new())) }

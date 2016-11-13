@@ -73,7 +73,7 @@ CREATE TABLE Hotel (
   OwnerPersonID int4 NOT NULL, 
   RuleSetID     int4 NOT NULL,
   CityID        int4 NOT NULL,
-  PhotoSetID    int4 NOT NULL,
+  PhotoSetID    int4,
   Name          varchar(32) NOT NULL, 
   Description   varchar(255) NOT NULL, 
   Rating        int4, 

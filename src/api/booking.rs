@@ -18,11 +18,9 @@ use ::db::schema::*;
 use ::db::schemaext::*;
 use ::db::*;
 
-pub fn get_booking_by_id_handler(req: &mut Request) -> IronResult<Response> {
-    let id = match Authorizer::authorize_request(req) {
-        Ok(id) => id,
-        Err(err) => return Ok(err.into_api_response().into()),
-    };
+pub fn get_booking_by_id(req: &mut Request) -> IronResult<Response> {
+    let conn = get_db_connection();
+    let client = authorize!(conn, req);
 
     let booking_id = req.extensions
         .get::<Router>()
@@ -30,9 +28,7 @@ pub fn get_booking_by_id_handler(req: &mut Request) -> IronResult<Response> {
         .find("id")
         .unwrap();
 
-    info!("request GET /api/booking/{} {{ id: {} }}", booking_id, id);
-
-    let conn = get_db_connection();
+    info!("request GET /api/booking/{} {{ id: {} }}", booking_id, client.id);
 
     let booking = match conn.query(&Booking::select_builder()
                    .filter("ID = $1")
@@ -53,7 +49,7 @@ pub fn get_booking_by_id_handler(req: &mut Request) -> IronResult<Response> {
     let employee = conn.query(&EmployedIn::select_builder()
                    .filter("PersonID = $1")
                    .build(),
-               &[&id])
+               &[&client.id])
         .unwrap()
         .into_iter()
         .map(EmployedIn::from)
@@ -64,7 +60,7 @@ pub fn get_booking_by_id_handler(req: &mut Request) -> IronResult<Response> {
         .into_api_response()
         .into();
 
-    if id == booking.ClientPersonID {
+    if client.id == booking.ClientPersonID {
         Ok(ApiResponse::Ok(booking).into())
     } else if let Some(employee) = employee {
         if employee.HotelID == booking.HotelID {
@@ -77,35 +73,28 @@ pub fn get_booking_by_id_handler(req: &mut Request) -> IronResult<Response> {
     }
 }
 
-pub fn put_booking_handler(req: &mut Request) -> IronResult<Response> {
-    let new_booking: NewBooking = match json::decode(&request_body(req)) {
-        Ok(new_booking) => new_booking,
-        Err(err) => return Ok(InvalidSchemaError::from(err).into_api_response().into()),
-    };
-
-    let id = match Authorizer::authorize_request(req) {
-        Ok(id) => id,
-        Err(err) => return Ok(err.into_api_response().into()),
-    };
-
-    info!("request PUT /api/booking/ {{ id: {}, {:?} }}", id, new_booking);
-
+pub fn put_booking(req: &mut Request) -> IronResult<Response> {
     let conn = get_db_connection();
+
+    let new_booking: NewBooking = decode_body!(req);
+    let client = authorize!(conn, req);
+
+    info!("request PUT /api/booking/ {{ id: {}, {:?} }}", client.id, new_booking);
 
     let client_id = if let Some(client_id) = new_booking.ClientPersonID {
         client_id
     } else {
-        id
+        client.id
     };
 
-    let receptionist = if client_id != id {
+    let receptionist = if client_id != client.id {
         match conn.query(&SelectQueryBuilder::default()
                        .columns("EmployedIn.PersonID, EmployedInHotelID")
                        .from_tables("EmployedIn, Receptionist")
                        .filter("EmployedIn.PersonID = $1 and Receptionist.PersonID = \
                                 EmployedIn.PersonID")
                        .build(),
-                   &[&id])
+                   &[&client.id])
             .unwrap()
             .into_iter()
             .map(EmployedIn::from)

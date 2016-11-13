@@ -49,7 +49,6 @@ impl<'a> SignedRequest for RequestBuilder<'a> {
     }
 }
 
-
 pub fn signin_with(login: &str, passwd: &str) -> (String, Roles) {
     let client = hyper::Client::new();
     let mut res = client.post("http://localhost:8080/api/signin/")
@@ -97,17 +96,30 @@ pub fn signup_with(login: &str, name: &str, email: &str, passhash: &str) -> Stri
 
     let roles: Roles = json::decode(&resp_body).unwrap();
     assert_eq!(res.status, StatusCode::Ok);
-    assert_eq!(roles, Roles {
-        Client: true, 
-        Owner: false, 
-        Manager: false, 
-        Cleaner: false, 
-        Receptionist: false
-    });
 
     token.value.to_owned()
 }
 
 pub fn signup_random() -> String {
     signup_with(&random_str(), &random_str(), &random_str(), &random_str())    
+}
+
+pub fn signin_owner() -> String {
+    create_owner(&random_str(), &random_str())
+}
+
+fn create_owner(login: &str, pass: &str) -> String {
+    signup_with(login, &random_str(), &random_str(), pass);
+    let (token, roles) = signin_with(login, pass);
+
+    let conn = get_db_connection();
+    let query = Owner::insert_query();
+    let owner = Owner { PersonID: roles.ID };
+    println!("query: {:?}", query);
+    println!("args:  {:?}", owner.insert_args());
+    conn.execute(&query, &owner.insert_args()).unwrap();
+
+    let (token, roles) = signin_with(login, pass);
+    assert!(roles.Owner);
+    token
 }

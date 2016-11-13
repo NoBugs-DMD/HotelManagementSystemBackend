@@ -123,3 +123,15 @@ fn update_account_info() {
     // Try to authorize with new password
     signin_with(&login, &new_passhash);
 }
+
+#[test]
+fn get_bookings() {
+    let login = random_str();
+    let name = random_str();
+    let email = random_str();
+    let passhash = random_str();
+
+    let token = signup_with(&login, &name, &email, &passhash);
+
+    // TODO implement hotels API and use it in this test
+}

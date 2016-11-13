@@ -32,16 +32,37 @@ fn main() {
     init_logging();
 
     let router = router! (
-        signin:               post   "/api/signin/"               => api::authorization::signin_handler,
-        signup:               post   "/api/signup/"               => api::authorization::signup_handler,
-        city_get_cities:      get    "/api/city/"                 => api::city::get_cities_handler,
-        city_put_city:        put    "/api/city/"                 => api::city::put_city_handler,
-        account_all_bookings: get    "/api/account/bookings/"     => api::account::get_bookings_handle,
-        account_bookings:     get    "/api/account/bookings/:cnt" => api::account::get_bookings_handle,
-        account_info:         get    "/api/account/"              => api::account::get_account_info,
-        update_account_info:  post   "/api/account/"              => api::account::update_account_info,
-        get_bookings_by_id:   get    "/api/booking/:id"           => api::booking::get_booking_by_id_handler,
-        put_booking:          put    "/api/booking/"              => api::booking::put_booking_handler,
+        signin:                   post   "/api/signin/"                  => api::authorization::signin,
+        signup:                   post   "/api/signup/"                  => api::authorization::signup,
+        
+        city_get_cities:          get    "/api/city/"                    => api::city::get_cities,
+        city_put_city:            put    "/api/city/"                    => api::city::put_city,
+        
+        account_get_all_bookings: get    "/api/account/bookings/"        => api::account::get_bookings,
+        account_get_n_bookings:   get    "/api/account/bookings/:cnt"    => api::account::get_bookings,
+        account_get_info:         get    "/api/account/"                 => api::account::get_account_info,
+        account_update_info:      post   "/api/account/"                 => api::account::update_account_info,
+        
+        booking_get_booking:      get    "/api/booking/:id"              => api::booking::get_booking_by_id,
+        booking_put_booking:      put    "/api/booking/"                 => api::booking::put_booking,
+        
+        hotel_get_all_hotels:     get    "/api/hotels/"                  => api::hotel::get_hotels,
+        hotel_get_n_hotels:       get    "/api/hotels/:cnt"              => api::hotel::get_hotels,
+        hotel_get_hotel_by_id:    get    "/api/hotel/:id"                => api::hotel::get_hotel,
+        hotel_put_hotel:          put    "/api/hotel/"                   => api::hotel::put_hotel,
+        hotel_update_hotel:       post   "/api/hotel/:id"                => api::hotel::update_hotel,               
+        hotel_get_all_rooms:      get    "/api/hotel/:id/rooms/"         => api::hotel::get_rooms,               
+        hotel_get_n_rooms:        get    "/api/hotel/:id/rooms/:cnt"     => api::hotel::get_rooms,
+        hotel_get_room:           get    "/api/hotel/:id/room/:number"   => api::hotel::get_room,
+        hotel_put_room:           put    "/api/hotel/:id/room/"          => api::hotel::put_room,
+        hotel_update_room:        post   "/api/hotel/:id/room/:number"   => api::hotel::update_room,
+        hotel_get_all_reviews:    get    "/api/hotel/:id/reviews/"       => api::hotel::get_reviews,
+        hotel_get_n_reviews:      get    "/api/hotel/:id/reviews/:cnt"   => api::hotel::get_reviews,
+        hotel_get_all_employees:  get    "/api/hotel/:id/employees/"     => api::hotel::get_employees,
+        hotel_get_n_employees:    get    "/api/hotel/:id/employees/:cnt" => api::hotel::get_employees,
+        hotel_del_employee:       delete "/api/hotel/:id/employee/:id"   => api::hotel::fire_employee,
+        hotel_get_ruleset:        get    "/api/hotel/:id/ruleset/"       => api::hotel::get_ruleset,
+        hotel_update_ruleset:     post   "/api/hotel/:id/ruleset/"       => api::hotel::update_ruleset,    
     );
 
     let mut chain = Chain::new(router);

@@ -1,7 +1,11 @@
+#[macro_use]
+mod macros;
 pub mod authorization;
 pub mod city;
 pub mod account;
 pub mod booking;
+pub mod hotel;
+pub mod ruleset;
 
 #[cfg(test)]
 mod tests;

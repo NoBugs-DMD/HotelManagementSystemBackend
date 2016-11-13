@@ -9,7 +9,7 @@ use ::proto::schema::NewCity;
 use ::db::schema::*;
 use ::db::*;
 
-pub fn get_cities_handler(_: &mut Request) -> IronResult<Response> {
+pub fn get_cities(_: &mut Request) -> IronResult<Response> {
     let query = City::select_builder().build();
     let conn = get_db_connection();
 
@@ -23,13 +23,13 @@ pub fn get_cities_handler(_: &mut Request) -> IronResult<Response> {
     Ok(ApiResponse::Ok(cities).into())
 }
 
-pub fn put_city_handler(req: &mut Request) -> IronResult<Response> {
+pub fn put_city(req: &mut Request) -> IronResult<Response> {
     let new_city: NewCity = match json::decode(&request_body(req)) {
         Ok(city) => city,
         Err(err) => return Ok(InvalidSchemaError::from(err).into_api_response().into()),
     };
 
-    info!("request POST /city {{ {:?} }}", new_city);
+    info!("request PUT /city {{ {:?} }}", new_city);
 
     let conn = get_db_connection();
     let query = City::insert_query();
