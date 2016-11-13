@@ -60,7 +60,7 @@ fn main() {
         hotel_get_n_reviews:      get    "/api/hotel/:id/reviews/:cnt"   => api::hotel::get_reviews,
         hotel_get_all_employees:  get    "/api/hotel/:id/employees/"     => api::hotel::get_employees,
         hotel_get_n_employees:    get    "/api/hotel/:id/employees/:cnt" => api::hotel::get_employees,
-        hotel_del_employee:       delete "/api/hotel/:id/employee/:id"   => api::hotel::fire_employee,
+        hotel_del_employee:       delete "/api/hotel/:id/employee/:eid"  => api::hotel::fire_employee,
         hotel_get_ruleset:        get    "/api/hotel/:id/ruleset/"       => api::hotel::get_ruleset,
         hotel_update_ruleset:     post   "/api/hotel/:id/ruleset/"       => api::hotel::update_ruleset,    
     );

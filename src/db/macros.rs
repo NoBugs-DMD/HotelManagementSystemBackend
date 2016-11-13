@@ -28,7 +28,7 @@ macro_rules! auto_struct_from_row {
 
 macro_rules! auto_struct {
     ($table:ident, $($member:ident $member_type:ty)*) => (
-        #[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
+        #[derive(RustcEncodable, RustcDecodable, Clone, Eq, PartialEq, Debug)]
         pub struct $table {
             $(pub $member: $member_type,)*
         }
@@ -43,7 +43,7 @@ macro_rules! auto_struct {
         }
     );
     ($table:ident id, $($member:ident $member_type:ty)*) => (
-        #[derive(RustcEncodable, RustcDecodable, Clone, Debug)]
+        #[derive(RustcEncodable, RustcDecodable, Clone, Eq, PartialEq, Debug)]
         pub struct $table {
             pub ID: i32,
             $(pub $member: $member_type,)*

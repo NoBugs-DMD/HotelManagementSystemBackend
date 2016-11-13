@@ -30,6 +30,8 @@ pub fn get_hotels(req: &mut Request) -> IronResult<Response> {
         .map(|s| i32::from_str(s).unwrap())
         .unwrap_or(i32::MAX);
 
+    info!("request GET /hotels/{}?offset={}", cnt, ofst);
+
     let conn = get_db_connection();
     let hotels = conn.query(&Hotel::select_builder()
                    .limit(cnt)
@@ -51,7 +53,9 @@ pub fn get_hotel(req: &mut Request) -> IronResult<Response> {
         .find("id")
         .map(|s| i32::from_str(s).unwrap())
         .expect("No Hotel ID in request");
-    
+
+    info!("request GET /hotel/{}", hotel_id);
+
     let conn = get_db_connection();
     let hotel = conn.query(&Hotel::select_builder()
                    .filter("ID = $1")
@@ -64,7 +68,7 @@ pub fn get_hotel(req: &mut Request) -> IronResult<Response> {
 
     match hotel {
         Some(hotel) => Ok(ApiResponse::Ok(hotel).into()),
-        None => { 
+        None => {
             Ok(NotFoundError::from_str(format!("No Hotel with id {} found", hotel_id))
                 .into_api_response()
                 .into())
@@ -83,16 +87,17 @@ pub fn put_hotel(req: &mut Request) -> IronResult<Response> {
     }
 
     let new_hotel: NewHotel = decode_body!(req);
-    let hotel = Hotel::new(
-        client.id,
-        DEFAULT_RULESET_ID,
-        new_hotel.CityID,
-        None,
-        new_hotel.Name,
-        new_hotel.Description,
-        None,
-        new_hotel.Stars
-    );
+
+    info!("request PUT /hotel/ {{ {:?} }}", new_hotel);
+
+    let hotel = Hotel::new(client.id,
+                           DEFAULT_RULESET_ID,
+                           new_hotel.CityID,
+                           None,
+                           new_hotel.Name,
+                           new_hotel.Description,
+                           None,
+                           new_hotel.Stars);
 
     conn.execute(&Hotel::insert_query(), &hotel.insert_args())
         .unwrap();
@@ -119,15 +124,18 @@ pub fn update_hotel(req: &mut Request) -> IronResult<Response> {
 
     let update_hotel: UpdateHotel = decode_body!(req);
 
+    info!("request POST /hotel/ {{ {:?} }}", update_hotel);
+
     // Check authority in the hotel-to-update
-    if !client.roles.Owns.map_or(false, |owns| owns.contains(&hotel_id)) 
-    && !client.roles.EmployedIn.map_or(false, |emp| emp.contains(&hotel_id)) {
-        return Ok(NotAuthorizedError::from_str(format!("Not owner or employee of hotel {}", hotel_id))
+    if !client.roles.Owns.map_or(false, |owns| owns.contains(&hotel_id)) &&
+       !client.roles.EmployedIn.map_or(false, |emp| emp.contains(&hotel_id)) {
+        return Ok(NotAuthorizedError::from_str(format!("Not owner or employee of hotel {}",
+                                                       hotel_id))
             .into_api_response()
             .into());
     }
 
-    let mut update = Hotel::update_builder().filter(format!("HotelID = {}", hotel_id));
+    let mut update = Hotel::update_builder().filter(format!("ID = {}", hotel_id));
     let mut values: Vec<&ToSql> = Vec::with_capacity(4);
 
     if let Some(id) = update_hotel.RuleSetID.as_ref() {
@@ -161,33 +169,281 @@ pub fn update_hotel(req: &mut Request) -> IronResult<Response> {
     }
 
     conn.execute(&update.build(), &values)
-    .unwrap();
+        .unwrap();
 
     Ok(Response::with(StatusCode::Ok))
 }
 
 pub fn get_rooms(req: &mut Request) -> IronResult<Response> {
-    unimplemented!()
+    let ofst = req.get_ref::<Params>()
+        .unwrap()
+        .find(&["offset"])
+        .map(|val| i32::from_value(val).unwrap_or(0))
+        .unwrap_or(0);
+
+    let hotel_id = req.extensions
+        .get::<Router>()
+        .unwrap()
+        .find("id")
+        .map(|s| i32::from_str(s).unwrap())
+        .expect("No Hotel ID in request");
+
+    let cnt = req.extensions
+        .get::<Router>()
+        .unwrap()
+        .find("cnt")
+        .map(|s| i32::from_str(s).unwrap())
+        .unwrap_or(i32::MAX);
+
+
+    info!("request GET /hotel/{}/rooms/{}?offset={}",
+          hotel_id,
+          cnt,
+          ofst);
+
+    let conn = get_db_connection();
+    let rooms = conn.query(&Room::select_builder()
+                   .filter("HotelID = $1")
+                   .limit(cnt)
+                   .offset(ofst)
+                   .build(),
+               &[&hotel_id])
+        .unwrap()
+        .into_iter()
+        .map(Room::from)
+        .collect::<Vec<Room>>();
+
+    Ok(ApiResponse::Ok(rooms).into())
 }
 
 pub fn get_room(req: &mut Request) -> IronResult<Response> {
-    unimplemented!()
+    let hotel_id = req.extensions
+        .get::<Router>()
+        .unwrap()
+        .find("id")
+        .map(|s| i32::from_str(s).unwrap())
+        .expect("No Hotel ID in request");
+
+    let room_number = req.extensions
+        .get::<Router>()
+        .unwrap()
+        .find("number")
+        .map(|s| i32::from_str(s).unwrap())
+        .expect("No Room ID in request");
+
+    info!("request GET /hotel/{}/room/{}", hotel_id, room_number);
+
+    let conn = get_db_connection();
+    let room = conn.query(&Room::select_builder()
+                   .filter("HotelID = $1 and RoomNumber = $2")
+                   .build(),
+               &[&hotel_id, &room_number])
+        .unwrap()
+        .into_iter()
+        .last()
+        .map(Room::from);
+
+    match room {
+        Some(room) => Ok(ApiResponse::Ok(room).into()),
+        None => {
+            Ok(NotFoundError::from_str(format!("Room number {} not found in hotel {}",
+                                               room_number,
+                                               hotel_id))
+                .into_api_response()
+                .into())
+        }
+    }
 }
 
 pub fn put_room(req: &mut Request) -> IronResult<Response> {
-    unimplemented!()
+    let hotel_id = req.extensions
+        .get::<Router>()
+        .unwrap()
+        .find("id")
+        .map(|s| i32::from_str(s).unwrap())
+        .expect("No Hotel ID in request");
+
+    let conn = get_db_connection();
+    let user = authorize!(conn, req);
+
+    // Check authority
+    if !user.roles.Owns.map_or(false, |owns| owns.contains(&hotel_id)) &&
+       !user.roles.EmployedIn.map_or(false, |emp| emp.contains(&hotel_id)) {
+        return Ok(NotAuthorizedError::from_str(format!("Not owner or employee of hotel {}",
+                                                       hotel_id))
+            .into_api_response()
+            .into());
+    }
+
+    let new_room: NewRoom = decode_body!(req);
+
+    info!("request PUT /hotel/{}/room/ {{ {:?} }}", hotel_id, new_room);
+
+    let room = Room {
+        HotelID: hotel_id,
+        RoomNumber: new_room.RoomNumber,
+        RoomLevelID: new_room.RoomLevelID,
+        PhotoSetID: new_room.PhotoSetID,
+    };
+
+    conn.execute(&Room::insert_query(), &room.insert_args())
+        .unwrap();
+    Ok(Response::with(StatusCode::Ok))
 }
 
 pub fn update_room(req: &mut Request) -> IronResult<Response> {
-    unimplemented!()
+    let hotel_id = req.extensions
+        .get::<Router>()
+        .unwrap()
+        .find("id")
+        .map(|s| i32::from_str(s).unwrap())
+        .expect("No Hotel ID in request");
+
+    let room_number = req.extensions
+        .get::<Router>()
+        .unwrap()
+        .find("number")
+        .map(|s| i32::from_str(s).unwrap())
+        .expect("No Room ID in request");
+
+    let conn = get_db_connection();
+    let user = authorize!(conn, req);
+
+    // Check authority
+    if !user.roles.Owns.map_or(false, |owns| owns.contains(&hotel_id)) &&
+       !user.roles.EmployedIn.map_or(false, |emp| emp.contains(&hotel_id)) {
+        return Ok(NotAuthorizedError::from_str(format!("Not owner or employee of hotel {}",
+                                                       hotel_id))
+            .into_api_response()
+            .into());
+    }
+
+    let upd_room: UpdateRoom = decode_body!(req);
+
+    info!("request POST /hotel/{}/room/{} {{ {:?} }}",
+          hotel_id,
+          room_number,
+          upd_room);
+
+    let mut values: Vec<&ToSql> = Vec::new();
+    let mut update = Room::update_builder()
+        .filter(format!("HotelID = {} and RoomNumber = {}", hotel_id, room_number));
+
+    if let Some(room_lvl_id) = upd_room.RoomLevelID.as_ref() {
+        values.push(room_lvl_id);
+        update = update.set("RoomLevelID");
+    }
+
+    if let Some(photo_set_id) = upd_room.PhotoSetID.as_ref() {
+        values.push(photo_set_id);
+        update = update.set("PhotoSetID");
+    }
+
+    conn.execute(&update.build(), &values)
+        .unwrap();
+
+    Ok(Response::with(StatusCode::Ok))
 }
 
 pub fn get_reviews(req: &mut Request) -> IronResult<Response> {
-    unimplemented!()
+    let ofst = req.get_ref::<Params>()
+        .unwrap()
+        .find(&["offset"])
+        .map(|val| i32::from_value(val).unwrap_or(0))
+        .unwrap_or(0);
+
+    let hotel_id = req.extensions
+        .get::<Router>()
+        .unwrap()
+        .find("id")
+        .map(|s| i32::from_str(s).unwrap())
+        .expect("No Hotel ID in request");
+
+    let cnt = req.extensions
+        .get::<Router>()
+        .unwrap()
+        .find("cnt")
+        .map(|s| i32::from_str(s).unwrap())
+        .unwrap_or(i32::MAX);
+
+
+    info!("request GET /hotel/{}/reviews/{}?offset={}",
+          hotel_id,
+          cnt,
+          ofst);
+
+    let conn = get_db_connection();
+    let reviews = conn.query(&SelectQueryBuilder::default()
+                   .columns("Review.*")
+                   .from_tables("Review, Booking")
+                   .filter("Booking.HotelID = $1 and Review.BookingID = Booking.ID")
+                   .limit(cnt)
+                   .offset(ofst)
+                   .build(),
+               &[&hotel_id])
+        .unwrap()
+        .into_iter()
+        .map(Review::from)
+        .collect::<Vec<Review>>();
+
+    Ok(ApiResponse::Ok(reviews).into())
 }
 
 pub fn get_employees(req: &mut Request) -> IronResult<Response> {
-    unimplemented!()
+    let ofst = req.get_ref::<Params>()
+        .unwrap()
+        .find(&["offset"])
+        .map(|val| i32::from_value(val).unwrap_or(0))
+        .unwrap_or(0);
+
+    let hotel_id = req.extensions
+        .get::<Router>()
+        .unwrap()
+        .find("id")
+        .map(|s| i32::from_str(s).unwrap())
+        .expect("No Hotel ID in request");
+
+    let cnt = req.extensions
+        .get::<Router>()
+        .unwrap()
+        .find("cnt")
+        .map(|s| i32::from_str(s).unwrap())
+        .unwrap_or(i32::MAX);
+
+
+    info!("request GET /hotel/{}/employees/{}?offset={}",
+          hotel_id,
+          cnt,
+          ofst);
+
+    let conn = get_db_connection();
+    let persons = conn.query(&SelectQueryBuilder::default()
+                   .columns("Person.*")
+                   .from_tables("EmployedIn, Person")
+                   .filter("EmployedIn.HotelID = $1 and EmployedIn.PersonID = Person.ID")
+                   .limit(cnt)
+                   .offset(ofst)
+                   .build(),
+               &[&hotel_id])
+        .unwrap()
+        .into_iter()
+        .map(Person::from)
+        .collect::<Vec<Person>>();
+        
+    let mut employees = Vec::with_capacity(persons.len());
+    for person in persons.into_iter() {
+        let roles = match Authorizer::get_roles(&conn, person.ID) {
+            Ok(roles) => roles,
+            Err(err) => return Ok(err.into_api_response().into())
+        };
+
+        employees.push(Employee {
+            Person: person,
+            Roles: roles
+        }); 
+    }
+
+    Ok(ApiResponse::Ok(employees).into())
 }
 
 pub fn fire_employee(req: &mut Request) -> IronResult<Response> {

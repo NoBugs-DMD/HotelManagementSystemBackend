@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use ::db::schema::Person;
 
 #[derive(Debug, RustcDecodable)]
 pub struct SigninData {
@@ -63,3 +64,23 @@ pub struct UpdateHotel {
     pub PhotoSetID: Option<i32>,
     pub Stars: Option<i32>,
 }
+
+#[derive(Debug, RustcEncodable, RustcDecodable)]
+pub struct NewRoom {
+    pub RoomNumber: i32,
+    pub RoomLevelID: i32,
+    pub PhotoSetID: Option<i32>
+}
+
+#[derive(Debug, RustcEncodable, RustcDecodable)]
+pub struct UpdateRoom {
+    pub RoomLevelID: Option<i32>,
+    pub PhotoSetID: Option<i32>
+}
+
+#[derive(Debug, RustcEncodable, RustcDecodable)]
+pub struct Employee {
+    pub Person: Person,
+    pub Roles: Roles,
+}
+

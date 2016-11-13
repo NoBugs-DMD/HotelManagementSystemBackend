@@ -51,7 +51,12 @@ pub fn signup(req: &mut Request) -> IronResult<Response> {
 }
 
 fn respond_with_roles_and_token(token: String) -> Response {
-    let roles = match Authorizer::get_roles(&get_db_connection(), &token) {
+    let id = match Authorizer::get_id(&token) {
+        Ok(id) => id,
+        Err(err) => return err.into_api_response().into()
+    };
+
+    let roles = match Authorizer::get_roles(&get_db_connection(), id) {
         Ok(roles) => roles,
         Err(err) => return err.into_api_response().into(),   
     };
@@ -117,9 +122,10 @@ impl Authorizer {
             }
         };
 
+        let id = Self::get_id(&token_cookie.value)?; 
         Ok(Authorized {
-            id: Self::get_id(&token_cookie.value)?,
-            roles: Self::get_roles(conn, &token_cookie.value)? 
+            id: id,
+            roles: Self::get_roles(conn, id)? 
         })
     }
 
@@ -128,9 +134,7 @@ impl Authorizer {
             .ok_or(box NotAuthorizedError::from_str("Token has expired"))
     }
 
-    fn get_roles(conn: &Connection, token: &str) -> ApiResult<Roles> {
-        let id = Self::get_id(token)?;
-
+    pub fn get_roles(conn: &Connection, id: i32) -> ApiResult<Roles> {
         macro_rules! query_all_with_id {
             ($conn:ident, $table:ident) => (
                 $conn.query(&$table::select_builder()
