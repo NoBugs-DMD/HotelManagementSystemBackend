@@ -19,18 +19,21 @@ run-debug: build-debug
     cargo run
 
 build-release: clean-migrations
+    #!/bin/bash
     cd migrations
     ln -sf ./.sqls/release
     cd ..
     cargo build --release
 
 build-debug: clean-migrations
+    #!/bin/bash
     cd  migrations
     ln -sf ./.sqls/debug
     cd ..
     cargo build
 
 clean-migrations:
+    #!/bin/bash
     if [ -a migrations/release ]; then unlink migrations/release > /dev/null; fi
     if [ -a migrations/debug ];   then unlink migrations/debug   > /dev/null; fi
     

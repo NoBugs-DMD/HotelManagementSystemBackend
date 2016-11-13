@@ -15,5 +15,6 @@ before_script:
   - which diesel || cargo install diesel_cli --force
   - which just || cargo install just --force
   - echo "DATABASE_URL=postgres://postgres@localhost/nobugs" > .env
+  - just build-debug
   - diesel database setup
   - diesel migration run
