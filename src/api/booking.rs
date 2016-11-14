@@ -1,12 +1,6 @@
-// GET booking/?hotel=id&client=id&date[from]=timestamp&date[to]=timestamp
-// GET booking/:id
-// PUT booking/
-// POST booking/:id
-
 use chrono;
 use iron::prelude::*;
 use router::Router;
-use rustc_serialize::json;
 use hyper::status::StatusCode;
 
 use super::request_body;
@@ -20,7 +14,7 @@ use ::db::*;
 
 pub fn get_booking_by_id(req: &mut Request) -> IronResult<Response> {
     let conn = get_db_connection();
-    let client = Authorizer::authorize_request(&conn, req)?;
+    let user = Authorizer::authorize_request(&conn, req)?;
 
     let booking_id = req.extensions
         .get::<Router>()
@@ -30,7 +24,7 @@ pub fn get_booking_by_id(req: &mut Request) -> IronResult<Response> {
 
     info!("request GET /api/booking/{} {{ id: {} }}",
           booking_id,
-          client.id);
+          user.id);
 
     let booking = match conn.query(&Booking::select_builder()
                    .filter("ID = $1")
@@ -49,7 +43,7 @@ pub fn get_booking_by_id(req: &mut Request) -> IronResult<Response> {
     let employee = conn.query(&EmployedIn::select_builder()
                    .filter("PersonID = $1")
                    .build(),
-               &[&client.id])
+               &[&user.id])
         .unwrap()
         .into_iter()
         .map(EmployedIn::from)
@@ -59,7 +53,7 @@ pub fn get_booking_by_id(req: &mut Request) -> IronResult<Response> {
                                                  employee")
         .into();
 
-    if client.id == booking.ClientPersonID {
+    if user.id == booking.ClientPersonID {
         Ok(booking.as_response())
     } else if let Some(employee) = employee {
         if employee.HotelID == booking.HotelID {

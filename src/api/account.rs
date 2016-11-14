@@ -1,4 +1,3 @@
-use rustc_serialize::json;
 use router::Router;
 use hyper::status::StatusCode;
 use iron::prelude::*;
@@ -19,7 +18,7 @@ use ::db::*;
 
 pub fn get_bookings(req: &mut Request) -> IronResult<Response> {
     let conn = get_db_connection();
-    let client = Authorizer::authorize_request(&conn, req)?;
+    let user = Authorizer::authorize_request(&conn, req)?;
 
     let ofst = req.get_ref::<Params>()
         .unwrap()
@@ -35,7 +34,7 @@ pub fn get_bookings(req: &mut Request) -> IronResult<Response> {
         .unwrap_or(i32::MAX);
 
     info!("request GET /account/bookings {{ id: {}, cnt: {}, ofst: {} }}",
-          client.id,
+          user.id,
           cnt,
           ofst);
 
@@ -44,7 +43,7 @@ pub fn get_bookings(req: &mut Request) -> IronResult<Response> {
                    .limit(cnt)
                    .offset(ofst)
                    .build(),
-               &[&client.id])
+               &[&user.id])
         .unwrap()
         .into_iter()
         .map(Booking::from)
@@ -55,16 +54,16 @@ pub fn get_bookings(req: &mut Request) -> IronResult<Response> {
 
 pub fn get_account_info(req: &mut Request) -> IronResult<Response> {
     let conn = get_db_connection();
-    let client = Authorizer::authorize_request(&conn, req)?;
+    let user = Authorizer::authorize_request(&conn, req)?;
 
-    info!("request GET /account/ {{ id: {} }}", client.id);
+    info!("request GET /account/ {{ id: {} }}", user.id);
 
     let info = conn.query(&Client::select_builder()
                    .columns("ID,Login,Name,Email")
                    .from_tables("Person")
                    .filter("ID = $1")
                    .build(),
-               &[&client.id])
+               &[&user.id])
         .unwrap()
         .into_iter()
         .map(AccountInfo::from)
@@ -76,13 +75,13 @@ pub fn get_account_info(req: &mut Request) -> IronResult<Response> {
 
 pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
     let conn = get_db_connection();
-    let client = Authorizer::authorize_request(&conn, req)?;
+    let user = Authorizer::authorize_request(&conn, req)?;
     let upd_info_data: UpdateAccountInfoData = request_body(req)?;
 
     info!("request POST /account/ {{ {:?} }}", upd_info_data);
 
     // Vector to store values that need an update
-    let mut update = Person::update_builder().filter(format!("ID={}", client.id));
+    let mut update = Person::update_builder().filter(format!("ID={}", user.id));
     let mut values: Vec<&ToSql> = Vec::with_capacity(3);
 
     // If user wants to update password, both OldPassHash and NewPassHash must be set
@@ -92,7 +91,7 @@ pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
             let count = conn.query(&Person::select_builder()
                            .filter("ID = $1 and PassHash = $2")
                            .build(),
-                       &[&client.id, &old_hash])
+                       &[&user.id, &old_hash])
                 .unwrap()
                 .into_iter()
                 .count();

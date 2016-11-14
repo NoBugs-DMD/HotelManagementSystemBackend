@@ -1,6 +1,5 @@
 use iron::prelude::*;
 use router::Router;
-use rustc_serialize::json;
 use hyper::status::StatusCode;
 use params::{Params, FromValue};
 use postgres::types::ToSql;
@@ -74,9 +73,9 @@ pub fn get_hotel(req: &mut Request) -> IronResult<Response> {
 
 pub fn put_hotel(req: &mut Request) -> IronResult<Response> {
     let conn = get_db_connection();
-    let client = Authorizer::authorize_request(&conn, req)?;
+    let user = Authorizer::authorize_request(&conn, req)?;
 
-    if !client.roles.Owner {
+    if !user.roles.Owner {
         return Err(NotAuthorizedError::from_str("Only owner can add a hotel").into());
     }
 
@@ -84,7 +83,7 @@ pub fn put_hotel(req: &mut Request) -> IronResult<Response> {
 
     info!("request PUT /hotel/ {{ {:?} }}", new_hotel);
 
-    let hotel = Hotel::new(client.id,
+    let hotel = Hotel::new(user.id,
                            DEFAULT_RULESET_ID,
                            new_hotel.CityID,
                            None,
@@ -108,9 +107,9 @@ pub fn update_hotel(req: &mut Request) -> IronResult<Response> {
         .expect("No Hotel ID in request");
 
     let conn = get_db_connection();
-    let client = Authorizer::authorize_request(&conn, req)?;
+    let user = Authorizer::authorize_request(&conn, req)?;
 
-    if !client.roles.Owner && !client.roles.Manager {
+    if !user.roles.Owner && !user.roles.Manager {
         return Err(NotAuthorizedError::from_str("Only owner and manager update hotel's info")
             .into());
     }
@@ -120,8 +119,8 @@ pub fn update_hotel(req: &mut Request) -> IronResult<Response> {
     info!("request POST /hotel/ {{ {:?} }}", update_hotel);
 
     // Check authority in the hotel-to-update
-    if !client.roles.Owns.map_or(false, |owns| owns.contains(&hotel_id)) &&
-       !client.roles.EmployedIn.map_or(false, |emp| emp.contains(&hotel_id)) {
+    if !user.roles.Owns.map_or(false, |owns| owns.contains(&hotel_id)) &&
+       !user.roles.EmployedIn.map_or(false, |emp| emp.contains(&hotel_id)) {
         return Err(NotAuthorizedError::from_str(format!("Not owner or employee of hotel {}",
                                                         hotel_id))
             .into());
@@ -448,12 +447,12 @@ pub fn fire_employee(req: &mut Request) -> IronResult<Response> {
         .expect("No Employee ID found in request");
 
     let conn = get_db_connection();
-    let client = Authorizer::authorize_request(&conn, req)?;
+    let user = Authorizer::authorize_request(&conn, req)?;
 
     info!("request DELETE /hotel/{}/employee/{}", hotel_id, emp_id);
 
     // Check authority in the hotel-to-update
-    if !client.roles.Owns.map_or(false, |owns| owns.contains(&hotel_id)) {
+    if !user.roles.Owns.map_or(false, |owns| owns.contains(&hotel_id)) {
         return Err(NotAuthorizedError::from_str(format!("Not owner or employee of hotel {}",
                                                        hotel_id))
             .into());

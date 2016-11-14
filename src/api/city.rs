@@ -1,10 +1,8 @@
 use iron::prelude::*;
-use rustc_serialize::json;
 use hyper::status::StatusCode;
 
 use super::request_body;
 use ::proto::response::*;
-use ::proto::error::*;
 use ::proto::schema::NewCity;
 use ::db::schema::*;
 use ::db::*;
