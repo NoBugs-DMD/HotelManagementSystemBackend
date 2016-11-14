@@ -29,7 +29,7 @@ CREATE TABLE Client (
 
 CREATE TABLE RuleSet (
   ID              SERIAL NOT NULL PRIMARY KEY, 
-  ManagerPersonID int4 references Manager.PersonID on delete set NULL,
+  ManagerPersonID int4,
   Name            varchar(255) NOT NULL, 
   Body            text NOT NULL
 );
