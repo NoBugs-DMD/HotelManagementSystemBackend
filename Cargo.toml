@@ -12,7 +12,7 @@ hyper = "0.9"
 iron = "0.4"
 router = "*"
 params = "*"
-cookie = "0.3.1"
+cookie = "0.2.5"
 oven = "0.4.0"
 rustc-serialize = "^0.3"
 lazy_static = "*"
@@ -25,3 +25,7 @@ rand = "*"
 
 [profile.dev]
 codegen-units = 4 
+
+[profile.release]
+codegen-units = 4
+lto = true
