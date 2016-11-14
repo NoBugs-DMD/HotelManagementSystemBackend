@@ -327,6 +327,11 @@ pub fn update_room(req: &mut Request) -> IronResult<Response> {
         update = update.set("PhotoSetID");
     }
 
+    // Early exit if we got empty json
+    if values.is_empty() {
+        return Ok(Response::with(StatusCode::Ok));
+    }
+
     conn.execute(&update.build(), &values)
         .unwrap();
 
