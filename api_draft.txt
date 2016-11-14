@@ -31,9 +31,6 @@ DEL by_id/employee/id { ... }
 GET by_id/ruleset/
 POST by_id/ruleset/ { ... }
 
-owner:
-GET hotels/N?offset=O
-
 manager:
 GET rulesets/
 GET ruleset/by_id
