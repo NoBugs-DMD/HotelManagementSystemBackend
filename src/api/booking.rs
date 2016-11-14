@@ -20,7 +20,7 @@ use ::db::*;
 
 pub fn get_booking_by_id(req: &mut Request) -> IronResult<Response> {
     let conn = get_db_connection();
-    let client = authorize!(conn, req);
+    let client = Authorizer::authorize_request(&conn, req)?;
 
     let booking_id = req.extensions
         .get::<Router>()
@@ -28,7 +28,9 @@ pub fn get_booking_by_id(req: &mut Request) -> IronResult<Response> {
         .find("id")
         .unwrap();
 
-    info!("request GET /api/booking/{} {{ id: {} }}", booking_id, client.id);
+    info!("request GET /api/booking/{} {{ id: {} }}",
+          booking_id,
+          client.id);
 
     let booking = match conn.query(&Booking::select_builder()
                    .filter("ID = $1")
@@ -40,9 +42,7 @@ pub fn get_booking_by_id(req: &mut Request) -> IronResult<Response> {
         .last() {
         Some(booking) => booking,
         None => {
-            return Ok(NotFoundError::from_str(format!("No booking with id {}", booking_id))
-                .into_api_response()
-                .into());
+            return Err(NotFoundError::from_str(format!("No booking with id {}", booking_id)).into())
         }
     };
 
@@ -57,58 +57,59 @@ pub fn get_booking_by_id(req: &mut Request) -> IronResult<Response> {
 
     let err_resp = NotAuthorizedError::from_str("Access denied, nor booking's owner nor hotel \
                                                  employee")
-        .into_api_response()
         .into();
 
     if client.id == booking.ClientPersonID {
-        Ok(ApiResponse::Ok(booking).into())
+        Ok(booking.as_response())
     } else if let Some(employee) = employee {
         if employee.HotelID == booking.HotelID {
-            Ok(ApiResponse::Ok(booking).into())
+            Ok(booking.as_response())
         } else {
-            Ok(err_resp)
+            Err(err_resp)
         }
     } else {
-        Ok(err_resp)
+        Err(err_resp)
     }
 }
 
 pub fn put_booking(req: &mut Request) -> IronResult<Response> {
     let conn = get_db_connection();
 
-    let new_booking: NewBooking = decode_body!(req);
-    let client = authorize!(conn, req);
+    let new_booking: NewBooking = request_body(req)?;
+    let user = Authorizer::authorize_request(&conn, req)?;
 
-    info!("request PUT /api/booking/ {{ id: {}, {:?} }}", client.id, new_booking);
+    info!("request PUT /api/booking/ {{ id: {}, {:?} }}",
+          user.id,
+          new_booking);
 
     let client_id = if let Some(client_id) = new_booking.ClientPersonID {
         client_id
     } else {
-        client.id
+        user.id
     };
 
-    let receptionist = if client_id != client.id {
-        match conn.query(&SelectQueryBuilder::default()
+    let receptionist = if client_id == user.id {
+        None
+    } else {
+        let receptionist = conn.query(&SelectQueryBuilder::default()
                        .columns("EmployedIn.PersonID, EmployedInHotelID")
                        .from_tables("EmployedIn, Receptionist")
                        .filter("EmployedIn.PersonID = $1 and Receptionist.PersonID = \
                                 EmployedIn.PersonID")
                        .build(),
-                   &[&client.id])
+                   &[&user.id])
             .unwrap()
             .into_iter()
             .map(EmployedIn::from)
-            .last() {
-            Some(receptionist) => Some(receptionist),
-            None => {
-                return Ok(NotAuthorizedError::from_str("Only receptionist can make bookings on \
+            .last();
+
+        if receptionist.is_none() {
+            return Err(NotAuthorizedError::from_str("Only receptionist can make bookings on \
                                                         behalf of client")
-                    .into_api_response()
-                    .into())
-            }
+                .into());
         }
-    } else {
-        None
+
+        receptionist
     };
 
     let hotel_id = if let Some(hotel_id) = new_booking.HotelID {
@@ -116,9 +117,7 @@ pub fn put_booking(req: &mut Request) -> IronResult<Response> {
     } else if let Some(receptionist) = receptionist.as_ref() {
         receptionist.HotelID
     } else {
-        return Ok(NotAuthorizedError::from_str("Couldn't infer HotelID")
-            .into_api_response()
-            .into());
+        return Err(NotAuthorizedError::from_str("Couldn't infer HotelID").into());
     };
 
     let current_time = chrono::UTC::now().naive_local();

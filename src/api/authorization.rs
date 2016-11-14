@@ -7,7 +7,6 @@ use hyper::header::CookiePair;
 use postgres::Connection;
 use iron::prelude::*;
 use oven::prelude::*;
-use rustc_serialize::json;
 
 use super::request_body;
 use ::proto::schema::*;
@@ -19,61 +18,42 @@ use ::db::*;
 pub type Token = String;
 
 pub fn signin(req: &mut Request) -> IronResult<Response> {
-    let signin_data: SigninData = match json::decode(&request_body(req)) {
-        Ok(sd) => sd,
-        Err(json_err) => return Ok(InvalidSchemaError::from(json_err).into_api_response().into()),
-    };
+    let signin_data: SigninData = request_body(req)?;
 
     info!("request POST /signin {{ {:?} }}", signin_data);
 
-    let token = match Authorizer::signin(&get_db_connection(), &signin_data) {
-        Ok(token) => token,
-        Err(err) => return Ok(err.into_api_response().into()),
-    };
+    let token = Authorizer::signin(&get_db_connection(), &signin_data)?;
 
-    Ok(respond_with_roles_and_token(token))
+    respond_with_roles_and_token(token)
 }
 
 pub fn signup(req: &mut Request) -> IronResult<Response> {
-    let signup_data: SignupData = match json::decode(&request_body(req)) {
-        Ok(sd) => sd,
-        Err(json_err) => return Ok(InvalidSchemaError::from(json_err).into_api_response().into()),
-    };
+    let signup_data: SignupData = request_body(req)?;
 
     info!("request POST /signup {{ {:?} }}", signup_data);
 
-    let token = match Authorizer::signup(&get_db_connection(), &signup_data) {
-        Ok(token) => token,
-        Err(err) => return Ok(err.into_api_response().into()),
-    };
+    let token = Authorizer::signup(&get_db_connection(), &signup_data)?;
 
-    Ok(respond_with_roles_and_token(token))
+    respond_with_roles_and_token(token)
 }
 
-fn respond_with_roles_and_token(token: String) -> Response {
-    let id = match Authorizer::get_id(&token) {
-        Ok(id) => id,
-        Err(err) => return err.into_api_response().into()
-    };
+fn respond_with_roles_and_token(token: String) -> IronResult<Response> {
+    let id = Authorizer::get_id(&token)?;
+    let roles = Authorizer::get_roles(&get_db_connection(), id)?;
 
-    let roles = match Authorizer::get_roles(&get_db_connection(), id) {
-        Ok(roles) => roles,
-        Err(err) => return err.into_api_response().into(),   
-    };
-
-    let mut response: Response = ApiResponse::Ok(roles).into();
+    let mut response: Response = roles.as_response();
     let mut cookie = CookiePair::new("token".to_string(), token.to_owned());
 
     // Nulling the path to tell browser to pass cookie for whole domain
     cookie.path = Some(String::new());
 
     response.set_cookie(cookie);
-    response
+    Ok(response)
 }
 
 pub struct Authorized {
     pub id: i32,
-    pub roles: Roles
+    pub roles: Roles,
 }
 
 pub struct Authorizer;
@@ -93,7 +73,6 @@ impl Authorizer {
         let person = Person::from(rows.get(0));
         let token = person.ID.to_string();
         TOKEN_MAP.put(token.clone(), person.ID);
-
 
         Ok(token)
     }
@@ -117,15 +96,13 @@ impl Authorizer {
     pub fn authorize_request(conn: &Connection, req: &mut Request) -> ApiResult<Authorized> {
         let token_cookie = match req.get_cookie("token") {
             Some(tc) => tc,
-            None => {
-                return Err(box NotAuthorizedError::from_str("No token found in request"))
-            }
+            None => return Err(box NotAuthorizedError::from_str("No token found in request")),
         };
 
-        let id = Self::get_id(&token_cookie.value)?; 
+        let id = Self::get_id(&token_cookie.value)?;
         Ok(Authorized {
             id: id,
-            roles: Self::get_roles(conn, id)? 
+            roles: Self::get_roles(conn, id)?,
         })
     }
 
@@ -150,40 +127,40 @@ impl Authorizer {
 
         let owned_hotels = if owner {
             Some(conn.query(&Hotel::select_builder()
-                               .columns("ID")
-                               .filter("OwnerPersonID = $1")
-                               .build(),
-                            &[&id])
-            .unwrap()
-            .into_iter()
-            .map(|row| row.get::<_, i32>("ID"))
-            .collect())
+                           .columns("ID")
+                           .filter("OwnerPersonID = $1")
+                           .build(),
+                       &[&id])
+                .unwrap()
+                .into_iter()
+                .map(|row| row.get::<_, i32>("ID"))
+                .collect())
         } else {
             None
         };
 
         let employed_in = if manager || cleaner || receptionist {
             Some(conn.query(&EmployedIn::select_builder()
-                              .columns("HotelID")
-                              .filter("PersonID = $1")
-                              .build(),
-                            &[&id])
-            .unwrap()
-            .into_iter()
-            .map(|row| row.get::<_, i32>("HotelID"))
-            .collect())
+                           .columns("HotelID")
+                           .filter("PersonID = $1")
+                           .build(),
+                       &[&id])
+                .unwrap()
+                .into_iter()
+                .map(|row| row.get::<_, i32>("HotelID"))
+                .collect())
         } else {
             None
         };
 
         let roles = Roles {
-            ID:           id,
-            Owner:        owner, 
-            Owns:         owned_hotels,
-            Manager:      manager,
-            Cleaner:      cleaner,
+            ID: id,
+            Owner: owner,
+            Owns: owned_hotels,
+            Manager: manager,
+            Cleaner: cleaner,
             Receptionist: receptionist,
-            EmployedIn:   employed_in,
+            EmployedIn: employed_in,
         };
 
         Ok(roles)
@@ -209,8 +186,9 @@ impl<K, V> SyncMap<K, V>
         SyncMap { map: Arc::new(RwLock::new(HashMap::new())) }
     }
 
-    pub fn get<Q: ?Sized>(&self, token: &Q) -> Option<V> 
-        where K: Borrow<Q>, Q: Hash + Eq    
+    pub fn get<Q: ?Sized>(&self, token: &Q) -> Option<V>
+        where K: Borrow<Q>,
+              Q: Hash + Eq
     {
         self.map.read().unwrap().get(token.borrow()).cloned()
     }

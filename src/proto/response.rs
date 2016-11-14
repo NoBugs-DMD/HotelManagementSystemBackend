@@ -1,43 +1,16 @@
 use rustc_serialize::Encodable;
-use rustc_serialize::json::{self, EncodeResult};
+use rustc_serialize::json;
 use iron::prelude::*;
 use hyper::status::StatusCode;
-use std::borrow::Cow;
 
-#[derive(Debug, Clone, RustcEncodable)]
-pub enum ApiResponse<D>
-    where D: Encodable
-{
-    Ok(D),
-    Err(i32, Cow<'static, str>),
+pub trait AsApiResponse {
+    fn as_response(&self) -> Response;
 }
 
-impl<D> ApiResponse<D>
-    where D: Encodable
-{
-    pub fn to_json(&self) -> EncodeResult<String> {
-        match *self {
-            ApiResponse::Ok(ref data) => json::encode(&data),
-            ApiResponse::Err(ref code, ref desc) => {
-                Ok(format!("{{ \"error_code\": {}, \"description\": \"{}\" }}",
-                           code,
-                           &desc))
-            }
-        }
-    }
-}
-
-impl<D> Into<Response> for ApiResponse<D>
-    where D: Encodable
-{
-    fn into(self) -> Response {
-        let mut response = match self { 
-            ApiResponse::Ok(_) => Response::with(StatusCode::Ok),
-            ApiResponse::Err(..) => Response::with(StatusCode::Forbidden),
-        };
-
-        response.body = Some(box self.to_json().unwrap());
-
+impl<D: Sized + Encodable> AsApiResponse for D {
+    fn as_response(&self) -> Response {
+        let mut response = Response::with(StatusCode::Ok);
+        response.body = Some(box json::encode(self).unwrap());
         response
     }
-}
+}  

@@ -19,8 +19,7 @@ use ::db::*;
 
 pub fn get_bookings(req: &mut Request) -> IronResult<Response> {
     let conn = get_db_connection();
-
-    let client = authorize!(conn, req);
+    let client = Authorizer::authorize_request(&conn, req)?;
 
     let ofst = req.get_ref::<Params>()
         .unwrap()
@@ -51,12 +50,12 @@ pub fn get_bookings(req: &mut Request) -> IronResult<Response> {
         .map(Booking::from)
         .collect::<Vec<Booking>>();
 
-    Ok(ApiResponse::Ok(bookings).into())
+    Ok(bookings.as_response())
 }
 
 pub fn get_account_info(req: &mut Request) -> IronResult<Response> {
     let conn = get_db_connection();
-    let client = authorize!(conn, req);
+    let client = Authorizer::authorize_request(&conn, req)?;
 
     info!("request GET /account/ {{ id: {} }}", client.id);
 
@@ -72,13 +71,13 @@ pub fn get_account_info(req: &mut Request) -> IronResult<Response> {
         .last()
         .unwrap();
 
-    Ok(ApiResponse::Ok(info).into())
+    Ok(info.as_response())
 }
 
 pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
     let conn = get_db_connection();
-    let client = authorize!(conn, req);
-    let upd_info_data: UpdateAccountInfoData = decode_body!(req);
+    let client = Authorizer::authorize_request(&conn, req)?;
+    let upd_info_data: UpdateAccountInfoData = request_body(req)?;
 
     info!("request POST /account/ {{ {:?} }}", upd_info_data);
 
@@ -102,18 +101,10 @@ pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
                 values.push(new_hash);
                 update = update.set("PassHash")
             } else {
-                return {
-                    Ok(OldPasswordIsInvalidError::from_str("Old password is invalid")
-                        .into_api_response()
-                        .into())
-                };
+                return Err(OldPasswordIsInvalidError::from_str("Old password is invalid").into());
             }
         } else {
-            return {
-                Ok(IncompleteDataError::from_str("Missing OldPassHash")
-                    .into_api_response()
-                    .into())
-            };
+            return Err(IncompleteDataError::from_str("Missing OldPassHash").into());
         }
     };
 
@@ -134,6 +125,6 @@ pub fn update_account_info(req: &mut Request) -> IronResult<Response> {
 
     conn.execute(&update.build(), &values)
         .unwrap();
-        
+
     Ok(Response::with(StatusCode::Ok))
 }

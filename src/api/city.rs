@@ -20,14 +20,11 @@ pub fn get_cities(_: &mut Request) -> IronResult<Response> {
         .map(City::from)
         .collect::<Vec<City>>();
 
-    Ok(ApiResponse::Ok(cities).into())
+    Ok(cities.as_response())
 }
 
 pub fn put_city(req: &mut Request) -> IronResult<Response> {
-    let new_city: NewCity = match json::decode(&request_body(req)) {
-        Ok(city) => city,
-        Err(err) => return Ok(InvalidSchemaError::from(err).into_api_response().into()),
-    };
+    let new_city: NewCity = request_body(req)?;
 
     info!("request PUT /city {{ {:?} }}", new_city);
 

@@ -43,7 +43,7 @@ pub fn get_hotels(req: &mut Request) -> IronResult<Response> {
         .map(Hotel::from)
         .collect::<Vec<Hotel>>();
 
-    Ok(ApiResponse::Ok(hotels).into())
+    Ok(hotels.as_response())
 }
 
 pub fn get_hotel(req: &mut Request) -> IronResult<Response> {
@@ -67,26 +67,20 @@ pub fn get_hotel(req: &mut Request) -> IronResult<Response> {
         .map(Hotel::from);
 
     match hotel {
-        Some(hotel) => Ok(ApiResponse::Ok(hotel).into()),
-        None => {
-            Ok(NotFoundError::from_str(format!("No Hotel with id {} found", hotel_id))
-                .into_api_response()
-                .into())
-        }
+        Some(hotel) => Ok(hotel.as_response()),
+        None => Err(NotFoundError::from_str(format!("No Hotel with id {} found", hotel_id)).into()),
     }
 }
 
 pub fn put_hotel(req: &mut Request) -> IronResult<Response> {
     let conn = get_db_connection();
-    let client = authorize!(conn, req);
+    let client = Authorizer::authorize_request(&conn, req)?;
 
     if !client.roles.Owner {
-        return Ok(NotAuthorizedError::from_str("Only owner can add a hotel")
-            .into_api_response()
-            .into());
+        return Err(NotAuthorizedError::from_str("Only owner can add a hotel").into());
     }
 
-    let new_hotel: NewHotel = decode_body!(req);
+    let new_hotel: NewHotel = request_body(req)?;
 
     info!("request PUT /hotel/ {{ {:?} }}", new_hotel);
 
@@ -114,24 +108,22 @@ pub fn update_hotel(req: &mut Request) -> IronResult<Response> {
         .expect("No Hotel ID in request");
 
     let conn = get_db_connection();
-    let client = authorize!(conn, req);
+    let client = Authorizer::authorize_request(&conn, req)?;
 
     if !client.roles.Owner && !client.roles.Manager {
-        return Ok(NotAuthorizedError::from_str("Only owner and manager update hotel's info")
-            .into_api_response()
+        return Err(NotAuthorizedError::from_str("Only owner and manager update hotel's info")
             .into());
     }
 
-    let update_hotel: UpdateHotel = decode_body!(req);
+    let update_hotel: UpdateHotel = request_body(req)?;
 
     info!("request POST /hotel/ {{ {:?} }}", update_hotel);
 
     // Check authority in the hotel-to-update
     if !client.roles.Owns.map_or(false, |owns| owns.contains(&hotel_id)) &&
        !client.roles.EmployedIn.map_or(false, |emp| emp.contains(&hotel_id)) {
-        return Ok(NotAuthorizedError::from_str(format!("Not owner or employee of hotel {}",
-                                                       hotel_id))
-            .into_api_response()
+        return Err(NotAuthorizedError::from_str(format!("Not owner or employee of hotel {}",
+                                                        hotel_id))
             .into());
     }
 
@@ -213,7 +205,7 @@ pub fn get_rooms(req: &mut Request) -> IronResult<Response> {
         .map(Room::from)
         .collect::<Vec<Room>>();
 
-    Ok(ApiResponse::Ok(rooms).into())
+    Ok(rooms.as_response())
 }
 
 pub fn get_room(req: &mut Request) -> IronResult<Response> {
@@ -244,12 +236,11 @@ pub fn get_room(req: &mut Request) -> IronResult<Response> {
         .map(Room::from);
 
     match room {
-        Some(room) => Ok(ApiResponse::Ok(room).into()),
+        Some(room) => Ok(room.as_response()),
         None => {
-            Ok(NotFoundError::from_str(format!("Room number {} not found in hotel {}",
+            Err(NotFoundError::from_str(format!("Room number {} not found in hotel {}",
                                                room_number,
                                                hotel_id))
-                .into_api_response()
                 .into())
         }
     }
@@ -264,18 +255,17 @@ pub fn put_room(req: &mut Request) -> IronResult<Response> {
         .expect("No Hotel ID in request");
 
     let conn = get_db_connection();
-    let user = authorize!(conn, req);
+    let user = Authorizer::authorize_request(&conn, req)?;
 
     // Check authority
     if !user.roles.Owns.map_or(false, |owns| owns.contains(&hotel_id)) &&
        !user.roles.EmployedIn.map_or(false, |emp| emp.contains(&hotel_id)) {
-        return Ok(NotAuthorizedError::from_str(format!("Not owner or employee of hotel {}",
-                                                       hotel_id))
-            .into_api_response()
+        return Err(NotAuthorizedError::from_str(format!("Not owner or employee of hotel {}",
+                                                        hotel_id))
             .into());
     }
 
-    let new_room: NewRoom = decode_body!(req);
+    let new_room: NewRoom = request_body(req)?;
 
     info!("request PUT /hotel/{}/room/ {{ {:?} }}", hotel_id, new_room);
 
@@ -307,18 +297,17 @@ pub fn update_room(req: &mut Request) -> IronResult<Response> {
         .expect("No Room ID in request");
 
     let conn = get_db_connection();
-    let user = authorize!(conn, req);
+    let user = Authorizer::authorize_request(&conn, req)?;
 
     // Check authority
     if !user.roles.Owns.map_or(false, |owns| owns.contains(&hotel_id)) &&
        !user.roles.EmployedIn.map_or(false, |emp| emp.contains(&hotel_id)) {
-        return Ok(NotAuthorizedError::from_str(format!("Not owner or employee of hotel {}",
+        return Err(NotAuthorizedError::from_str(format!("Not owner or employee of hotel {}",
                                                        hotel_id))
-            .into_api_response()
             .into());
     }
 
-    let upd_room: UpdateRoom = decode_body!(req);
+    let upd_room: UpdateRoom = request_body(req)?;
 
     info!("request POST /hotel/{}/room/{} {{ {:?} }}",
           hotel_id,
@@ -386,7 +375,7 @@ pub fn get_reviews(req: &mut Request) -> IronResult<Response> {
         .map(Review::from)
         .collect::<Vec<Review>>();
 
-    Ok(ApiResponse::Ok(reviews).into())
+    Ok(reviews.as_response())
 }
 
 pub fn get_employees(req: &mut Request) -> IronResult<Response> {
@@ -429,25 +418,63 @@ pub fn get_employees(req: &mut Request) -> IronResult<Response> {
         .into_iter()
         .map(Person::from)
         .collect::<Vec<Person>>();
-        
+
     let mut employees = Vec::with_capacity(persons.len());
     for person in persons.into_iter() {
-        let roles = match Authorizer::get_roles(&conn, person.ID) {
-            Ok(roles) => roles,
-            Err(err) => return Ok(err.into_api_response().into())
-        };
+        let roles = Authorizer::get_roles(&conn, person.ID)?;
 
         employees.push(Employee {
             Person: person,
-            Roles: roles
-        }); 
+            Roles: roles,
+        });
     }
 
-    Ok(ApiResponse::Ok(employees).into())
+    Ok(employees.as_response())
 }
 
 pub fn fire_employee(req: &mut Request) -> IronResult<Response> {
-    unimplemented!()
+    let hotel_id = req.extensions
+        .get::<Router>()
+        .unwrap()
+        .find("id")
+        .map(|s| i32::from_str(s).unwrap())
+        .expect("No Hotel ID found in request");
+
+    let emp_id = req.extensions
+        .get::<Router>()
+        .unwrap()
+        .find("eid")
+        .map(|s| i32::from_str(s).unwrap())
+        .expect("No Employee ID found in request");
+
+    let conn = get_db_connection();
+    let client = Authorizer::authorize_request(&conn, req)?;
+
+    info!("request DELETE /hotel/{}/employee/{}", hotel_id, emp_id);
+
+    // Check authority in the hotel-to-update
+    if !client.roles.Owns.map_or(false, |owns| owns.contains(&hotel_id)) {
+        return Err(NotAuthorizedError::from_str(format!("Not owner or employee of hotel {}",
+                                                       hotel_id))
+            .into());
+    }
+
+    let emp_roles = Authorizer::get_roles(&conn, emp_id)?;
+
+    if !emp_roles.EmployedIn.map_or(false, |employed_in| employed_in.contains(&emp_id)) {
+        return Err(NotFoundError::from_str(format!("Person {} is not employed in {}",
+                                                  emp_id,
+                                                  hotel_id))
+            .into());
+    }
+
+    conn.execute(&EmployedIn::delete_builder()
+                     .filter("HotelID = $1, PersonID = $2")
+                     .build(),
+                 &[&hotel_id, &emp_id])
+        .unwrap();
+
+    Ok(Response::with(StatusCode::Ok))
 }
 
 pub fn get_ruleset(req: &mut Request) -> IronResult<Response> {
