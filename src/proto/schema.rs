@@ -84,3 +84,15 @@ pub struct Employee {
     pub Roles: Roles,
 }
 
+#[derive(Debug, RustcEncodable, RustcDecodable)]
+pub struct NewRuleSet {
+    pub Name: String,
+    pub Body: String,
+}
+
+#[derive(Debug, RustcEncodable, RustcDecodable)]
+pub struct UpdateRuleSet {
+    pub Name: Option<String>,
+    pub Body: Option<String>,
+}
+

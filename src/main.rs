@@ -62,7 +62,13 @@ fn main() {
         hotel_get_n_employees:    get    "/api/hotel/:id/employees/:cnt" => api::hotel::get_employees,
         hotel_del_employee:       delete "/api/hotel/:id/employee/:eid"  => api::hotel::fire_employee,
         hotel_get_ruleset:        get    "/api/hotel/:id/ruleset/"       => api::hotel::get_ruleset,
-        hotel_update_ruleset:     post   "/api/hotel/:id/ruleset/"       => api::hotel::update_ruleset,    
+        hotel_update_ruleset:     post   "/api/hotel/:id/ruleset/"       => api::hotel::update_ruleset,
+
+        manager_get_all_rulesets: get    "/api/manager/rulesets/"        => api::manager::get_rulesets,
+        manager_get_ruleset:      get    "/api/manager/rulesets/:id"     => api::manager::get_ruleset,
+        manager_put_ruleset:      put    "/api/manager/ruleset/"         => api::manager::put_ruleset,
+        manager_update_ruleset:   post   "/api/manager/ruleset/:id"      => api::manager::update_ruleset,
+        manager_delete_ruleset:   delete "/api/manager/ruleset/:id"      => api::manager::delete_ruleset,
     );
 
     let mut chain = Chain::new(router);
