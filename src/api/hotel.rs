@@ -8,11 +8,12 @@ use std::i32;
 
 use super::request_body;
 use ::api::authorization::Authorizer;
-use ::api::ruleset::DEFAULT_RULESET_ID;
+use ::api::ruleset;
 use ::proto::response::*;
 use ::proto::error::*;
 use ::proto::schema::*;
 use ::db::schema::*;
+use ::db::schemaext::*;
 use ::db::*;
 
 pub fn get_hotels(req: &mut Request) -> IronResult<Response> {
@@ -83,17 +84,20 @@ pub fn put_hotel(req: &mut Request) -> IronResult<Response> {
 
     info!("request PUT /hotel/ {{ {:?} }}", new_hotel);
 
-    let hotel = Hotel::new(user.id,
-                           DEFAULT_RULESET_ID,
-                           new_hotel.CityID,
-                           None,
-                           new_hotel.Name,
-                           new_hotel.Description,
-                           None,
-                           new_hotel.Stars);
+    let hotel = Hotel {
+        ID: 0,
+        OwnerPersonID: user.id,
+        RuleSetID: *ruleset::DEFAULT_RULESET_ID,
+        CityID: new_hotel.CityID,
+        PhotoSetID: None,
+        Name: new_hotel.Name,
+        Description: new_hotel.Description,
+        Rating: None,
+        Stars: new_hotel.Stars
+    };
 
-    conn.execute(&Hotel::insert_query(), &hotel.insert_args())
-        .unwrap();
+    let hotel_id = procedure::insert_hotel(&conn, hotel);
+    ruleset::process_rules(&conn, hotel_id);
 
     Ok(Response::with(StatusCode::Ok))
 }
@@ -161,6 +165,10 @@ pub fn update_hotel(req: &mut Request) -> IronResult<Response> {
 
     conn.execute(&update.build(), &values)
         .unwrap();
+
+    if update_hotel.RuleSetID.is_some() {
+        ruleset::process_rules(&conn, hotel_id)?;
+    }
 
     Ok(Response::with(StatusCode::Ok))
 }
@@ -271,7 +279,7 @@ pub fn put_room(req: &mut Request) -> IronResult<Response> {
     let room = Room {
         HotelID: hotel_id,
         RoomNumber: new_room.RoomNumber,
-        RoomLevelID: new_room.RoomLevelID,
+        RoomLevel: new_room.RoomLevelID,
         PhotoSetID: new_room.PhotoSetID,
     };
 
@@ -479,12 +487,4 @@ pub fn fire_employee(req: &mut Request) -> IronResult<Response> {
         .unwrap();
 
     Ok(Response::with(StatusCode::Ok))
-}
-
-pub fn get_ruleset(req: &mut Request) -> IronResult<Response> {
-    unimplemented!()
-}
-
-pub fn update_ruleset(req: &mut Request) -> IronResult<Response> {
-    unimplemented!()
 }

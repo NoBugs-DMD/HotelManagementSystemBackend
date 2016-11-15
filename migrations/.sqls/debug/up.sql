@@ -31,21 +31,24 @@ CREATE TABLE RuleSet (
   ID              SERIAL NOT NULL PRIMARY KEY, 
   ManagerPersonID int4,
   Name            varchar(255) NOT NULL, 
-  Body            text NOT NULL
+  Body            text NOT NULL,
+  IsDefault       boolean NOT NULL
 );
 
 CREATE TABLE RoomLevel (
-  ID        SERIAL NOT NULL PRIMARY KEY, 
+  Level     int4 NOT NULL, 
   RuleSetID int4 NOT NULL, 
-  LevelName varchar(10) NOT NULL, 
-  PerNight  int4 NOT NULL
+  LevelName varchar(10), 
+  PerNight  int4 NOT NULL,
+  PRIMARY KEY (Level, RuleSetID)
 );
 
 CREATE TABLE ClientLevel (
-  ID                 SERIAL NOT NULL PRIMARY KEY, 
+  BookingsAmount     int4 NOT NULL, 
   RuleSetID          int4 NOT NULL, 
+  LevelName          varchar(255),
   DiscountPercentage int4 NOT NULL, 
-  LevelName          varchar(255) NOT NULL 
+  PRIMARY KEY (BookingsAmount, RuleSetID)
 );
 
 CREATE TABLE PhotoSet (
@@ -90,7 +93,7 @@ CREATE TABLE EmployedIn (
 CREATE TABLE Room (
   HotelID     int4 NOT NULL,
   RoomNumber  int4 NOT NULL,  
-  RoomLevelID int4 NOT NULL, 
+  RoomLevel   int4 NOT NULL, 
   PhotoSetID  int4,
   PRIMARY KEY (HotelID, RoomNumber)
 );
@@ -155,7 +158,7 @@ LANGUAGE 'plpgsql';
 CREATE TRIGGER auto_add_client AFTER INSERT ON Person
     FOR EACH ROW EXECUTE PROCEDURE auto_add_client(); 
 
--- Insert Booking and update MaintainedBy
+-- Insert Booking and return ID
 CREATE OR REPLACE FUNCTION insert_booking_and_return_id(ClientPersonID int4, 
                                                         HotelID        int4,  
                                                         RoomNumber     int4, 
@@ -166,7 +169,7 @@ CREATE OR REPLACE FUNCTION insert_booking_and_return_id(ClientPersonID int4,
 DECLARE
 new_id int4;
 BEGIN
-    INSERT INTO Booking 
+    INSERT INTO Booking (ClientPersonID, HotelID, RoomNumber, BookingTime, ArrivalTime, DepartureTime, FullCost, Paid, Cancelled)
     VALUES(ClientPersonID, HotelID, RoomNumber, BookingTime, ArrivalTime, DepartureTime, 0, false, false) 
     RETURNING id into new_id;
     RETURN new_id;
@@ -174,15 +177,44 @@ END;
 $insert_booking_and_return_id$
 LANGUAGE 'plpgsql';
 
+-- Insert Hotel and return ID
+CREATE OR REPLACE FUNCTION insert_hotel_and_return_id(OwnerPersonID int4,
+                                                      RuleSetID int4,
+                                                      CityID int4,
+                                                      PhotoSetID int4,
+                                                      Name varchar(32),
+                                                      Description varchar(255),
+                                                      Rating int4,
+                                                      Stars int4) 
+                                                      RETURNS int4 as $insert_hotel_and_return_id$
+DECLARE
+new_id int4;
+BEGIN
+    INSERT INTO Hotel (OwnerPersonID, RuleSetID, CityID, PhotoSetID, Name, Description, Rating, Stars) 
+    VALUES(OwnerPersonID, RuleSetID, CityID, PhotoSetID, Name, Description, Rating, Stars) 
+    RETURNING id into new_id;
+    RETURN new_id;
+END;
+$insert_hotel_and_return_id$
+LANGUAGE 'plpgsql';
+
 -- Trigger to auto calculate the cost on Booking insert
 CREATE OR REPLACE FUNCTION calculate_booking_cost() RETURNS TRIGGER as $calculate_booking_cost$
 DECLARE
+per_night int4;
+discount int4;
 BEGIN
     -- Get cost per-night for booked room level
-    DROP TABLE IF EXISTS per_night;
-    CREATE TEMP table per_night on commit drop
-    AS SELECT RL.PerNight FROM RoomLevel as RL, Room as R
-    WHERE R.HotelID = new.HotelID and R.RoomNumber = new.RoomNumber and R.RoomLevelID = RL.ID;
+    SELECT INTO per_night RoomLevel.PerNight FROM RoomLevel, Room, Hotel
+    WHERE Room.HotelID = new.HotelID and Room.RoomNumber = new.RoomNumber
+      AND new.HotelID = Hotel.ID and Hotel.RuleSetID = RoomLevel.RuleSetID
+      AND Room.RoomLevel = RoomLevel.Level;
+    
+    -- Get discount
+    SELECT INTO discount min(ClientLevel.DiscountPercentage) FROM ClientLevel, Hotel
+    WHERE Hotel.ID = new.HotelID and ClientLevel.RuleSetID = Hotel.RuleSetID
+      AND ClientLevel.BookingsAmount > (SELECT count(*) FROM Booking 
+                                        WHERE Booking.ClientPersonID = new.ClientPersonID);
 
     -- Check if per-night cost have not been retrieved
     IF NOT EXISTS (SELECT * FROM per_night) then
@@ -191,7 +223,9 @@ BEGIN
 
     -- Calculate number of nights
     -- Set cost
-    new.FullCost := per_night.PerNight * EXTRACT(DAY FROM (new.ArrivalTime, new.DepartureTime)); 
+    new.FullCost := ((100 - discoint)/100) * 
+                    per_night.PerNight * 
+                    EXTRACT(DAY FROM (new.ArrivalTime, new.DepartureTime)); 
 
     RETURN new;
 END;

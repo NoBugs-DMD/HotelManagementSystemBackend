@@ -73,6 +73,7 @@ pub fn put_ruleset(req: &mut Request) -> IronResult<Response> {
         ManagerPersonID: Some(user.id),
         Name: new_ruleset.Name,
         Body: new_ruleset.Body,
+        IsDefault: false
     };
 
     conn.execute(&RuleSet::insert_query(), &ruleset.insert_args())

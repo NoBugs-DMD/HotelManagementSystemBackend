@@ -43,25 +43,26 @@ auto_queries!(
         pub ID: i32,
         pub ManagerPersonID: Option<i32>,
         pub Name: String,
-        pub Body: String
+        pub Body: String,
+        pub IsDefault: bool
     }
 );
 
 auto_queries!(
     pub struct RoomLevel {
-        pub ID: i32,
+        pub Level: i32,
         pub RuleSetID: i32,
-        pub LevelName: String,
+        pub LevelName: Option<String>,
         pub PerNight: i32
     }
 );
 
 auto_queries!(
     pub struct ClientLevel {
-        pub ID: i32,
+        pub BookingsAmount: i32,
         pub RuleSetID: i32,
-        pub DiscountPercentage: i32,
-        pub LevelName: String
+        pub LevelName: Option<String>,
+        pub DiscountPercentage: i32
     }
 );
 
@@ -137,7 +138,7 @@ auto_queries!(
     pub struct Room {
         pub HotelID: i32,
         pub RoomNumber: i32,
-        pub RoomLevelID: i32,
+        pub RoomLevel: i32,
         pub PhotoSetID: Option<i32>
     }
 );

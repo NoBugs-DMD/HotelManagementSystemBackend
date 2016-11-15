@@ -8,6 +8,7 @@ use rand;
 use super::random_str;
 use super::response_body;
 use super::authorization::*;
+use ::api::ruleset::DEFAULT_RULESET_ID;
 use ::proto::schema::*;
 use ::db::schemaext::*;
 use ::db::schema::*;
@@ -188,7 +189,7 @@ fn update_hotel() {
     let client = hyper::Client::new();
     let mut res = client.post(&format!("http://localhost:8080/api/hotel/{}", hotel.ID))
         .body(&json::encode(&UpdateHotel {
-            RuleSetID: Some(5),
+            RuleSetID: Some(*DEFAULT_RULESET_ID),
             Name: None,
             Description: None,
             PhotoSetID: Some(5),
@@ -214,7 +215,7 @@ fn update_hotel() {
     
     let hotel: Hotel = json::decode(&resp_body).unwrap();
 
-    assert_eq!(hotel.RuleSetID, 5);
+    assert_eq!(hotel.RuleSetID, *DEFAULT_RULESET_ID);
     assert_eq!(hotel.PhotoSetID, Some(5));
     assert_eq!(hotel.Stars, Some(3));
 }

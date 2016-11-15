@@ -19,9 +19,10 @@ fn request_body<T: Decodable>(req: &mut Request) -> ApiResult<T> {
     let mut buffer = String::with_capacity(128);
     req.body.read_to_string(&mut buffer).unwrap();
     debug!("request body: {}", buffer);
+        
+    decode_json(&buffer)
+}
 
-    let decoded =
-        json::decode(&buffer).map_err(|err| box InvalidSchemaError::from(err) as Box<ApiError>)?;
-
-    Ok(decoded)
+fn decode_json<T: Decodable>(json: &str) -> ApiResult<T> {
+    json::decode(json).map_err(|err| box InvalidSchemaError::from(err) as Box<ApiError>)
 }
