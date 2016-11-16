@@ -80,7 +80,7 @@ fn main() {
     // Get db connection from pool (will block until pool is ready)
     db::get_db_connection();
 
-    Iron::new(chain).http("localhost:8080").unwrap();
+    Iron::new(chain).http("0.0.0.0:8080").unwrap();
 }
 
 use std::env;
