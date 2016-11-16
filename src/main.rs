@@ -13,6 +13,7 @@ extern crate postgres;
 extern crate r2d2;
 extern crate r2d2_postgres;
 extern crate hyper;
+extern crate unicase;
 extern crate params;
 extern crate iron;
 extern crate cookie;
@@ -22,6 +23,7 @@ extern crate dotenv;
 extern crate chrono;
 
 use iron::prelude::*;
+use iron::AfterMiddleware;
 
 #[macro_use]
 mod proto;
@@ -76,6 +78,7 @@ fn main() {
 
     // TODO __CHANGE__ key and load it from non-gited file.
     chain.link(oven::new(Vec::from(&b"f8f9eaf1ecdedff5e5b749c58115441e"[..])));
+    chain.link_after(CorsMiddleware{});
 
     // Get db connection from pool (will block until pool is ready)
     db::get_db_connection();
@@ -96,4 +99,22 @@ fn init_logging() {
     }
 
     builder.init().unwrap();
+}
+
+struct CorsMiddleware;
+
+use hyper::method::Method;
+use unicase::UniCase;
+impl AfterMiddleware for CorsMiddleware {
+    fn after(&self, req: &mut Request, mut res: Response) -> IronResult<Response> {
+        res.headers.set(hyper::header::AccessControlAllowOrigin::Any);
+	res.headers.set(hyper::header::AccessControlAllowMethods(vec![Method::Get, Method::Post, Method::Put, Method::Delete]));
+	res.headers.set(hyper::header::AccessControlAllowHeaders(vec![
+		UniCase("Origin".to_owned()),
+		UniCase("Content-Type".to_owned()),
+		UniCase("Accept".to_owned()),
+		UniCase("token".to_owned())
+	]));
+        Ok(res)
+    }
 }
