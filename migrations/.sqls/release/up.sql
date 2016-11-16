@@ -199,33 +199,40 @@ END;
 $insert_hotel_and_return_id$
 LANGUAGE 'plpgsql';
 
--- Trigger to auto calculate the cost on Booking insert
-CREATE OR REPLACE FUNCTION calculate_booking_cost() RETURNS TRIGGER as $calculate_booking_cost$
+-- Calculate cost
+CREATE OR REPLACE FUNCTION room_cost(room_level int4, hotel_id int4, client_id int4) RETURNS int4 as $room_cost$
 DECLARE
 per_night int4;
 discount int4;
 BEGIN
     -- Get cost per-night for booked room level
-    SELECT INTO per_night RoomLevel.PerNight FROM RoomLevel, Room, Hotel
-    WHERE Room.HotelID = new.HotelID and Room.RoomNumber = new.RoomNumber
-      AND new.HotelID = Hotel.ID and Hotel.RuleSetID = RoomLevel.RuleSetID
-      AND Room.RoomLevel = RoomLevel.Level;
-    
+    SELECT INTO per_night RoomLevel.PerNight FROM RoomLevel, Hotel
+    WHERE Hotel.ID = hotel_id and Hotel.RuleSetID = RoomLevel.RuleSetID
+      AND RoomLevel.Level = room_level;
+
     -- Get discount
     SELECT INTO discount min(ClientLevel.DiscountPercentage) FROM ClientLevel, Hotel
-    WHERE Hotel.ID = new.HotelID and ClientLevel.RuleSetID = Hotel.RuleSetID
+    WHERE Hotel.ID = hotel_id and ClientLevel.RuleSetID = Hotel.RuleSetID
       AND ClientLevel.BookingsAmount > (SELECT count(*) FROM Booking 
-                                        WHERE Booking.ClientPersonID = new.ClientPersonID);
+                                        WHERE Booking.ClientPersonID = client_id);
 
-    -- Check if per-night cost have not been retrieved
-    IF NOT EXISTS (SELECT * FROM per_night) then
-      RAISE EXCEPTION 'No Room or LevelID';
-    END IF;
+    RETURN ((100 - discoint)/100) * 
+                    per_night.PerNight;
+END;
+$room_cost$
+LANGUAGE 'plpgsql';
+
+-- Trigger to auto calculate the cost on Booking insert
+CREATE OR REPLACE FUNCTION calculate_booking_cost() RETURNS TRIGGER as $calculate_booking_cost$
+DECLARE
+room_level int4;
+BEGIN
+    SELECT INTO room_level RoomLevel.Level FROM Room, RoomLevel
+    WHERE Room.HotelID = new.HotelID and Room.RoomNumber = new.RoomNumber;
 
     -- Calculate number of nights
     -- Set cost
-    new.FullCost := ((100 - discoint)/100) * 
-                    per_night.PerNight * 
+    new.FullCost := (SELECT room_cost(room_level, new.HotelID, new.ClientID)) * 
                     EXTRACT(DAY FROM (new.ArrivalTime, new.DepartureTime)); 
 
     RETURN new;

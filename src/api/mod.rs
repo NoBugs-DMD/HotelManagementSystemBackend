@@ -5,6 +5,7 @@ pub mod booking;
 pub mod hotel;
 pub mod ruleset;
 pub mod manager;
+pub mod search;
 
 #[cfg(test)]
 mod tests;

@@ -67,6 +67,9 @@ fn main() {
         manager_put_ruleset:      put    "/api/manager/ruleset/"         => api::manager::put_ruleset,
         manager_update_ruleset:   post   "/api/manager/ruleset/:id"      => api::manager::update_ruleset,
         manager_delete_ruleset:   delete "/api/manager/ruleset/:id"      => api::manager::delete_ruleset,
+
+        search:                   post   "/api/search/"                  => api::search::search
+        
     );
 
     let mut chain = Chain::new(router);

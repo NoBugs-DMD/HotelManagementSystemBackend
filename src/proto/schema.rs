@@ -1,5 +1,8 @@
 use chrono::NaiveDateTime;
+use postgres::Connection;
 use ::db::schema::Person;
+use ::db::schema::Room;
+use ::db::*;
 
 #[derive(Debug, RustcDecodable)]
 pub struct SigninData {
@@ -95,4 +98,45 @@ pub struct UpdateRuleSet {
     pub Name: Option<String>,
     pub Body: Option<String>,
 }
+
+#[derive(Debug, RustcEncodable, RustcDecodable)]
+pub struct Range<T: Ord> {
+    pub from: T,
+    pub to: T
+} 
+
+#[derive(Debug, RustcEncodable, RustcDecodable)]
+pub struct SearchRequest {
+    pub CityID: i32,
+    pub DateTime: Option<Range<NaiveDateTime>>,
+    pub Rating: Option<Range<i32>>,
+    pub Stars: Option<Range<i32>>,
+    pub Price: Option<Range<i32>>,
+    pub HotelID: Option<i32>,
+}
+
+#[derive(Debug, RustcEncodable, RustcDecodable)]
+pub struct PricedRoom {
+    pub Room: Room,
+    pub Price: i32,
+}
+
+impl PricedRoom {
+    pub fn from_room(conn: &Connection, room: Room, client_id: i32) -> PricedRoom {
+        use postgres::types::FromSql;
+        let price = conn.query("SELECT room_price($1, $2, $3)", &[&room.RoomLevel, &room.HotelID, &client_id])
+            .unwrap()
+            .into_iter()
+            .last()
+            .map(|row| row.get(0))
+            .unwrap();
+            
+        PricedRoom {
+            Room: room,
+            Price: price
+        }
+    }
+}
+
+
 
