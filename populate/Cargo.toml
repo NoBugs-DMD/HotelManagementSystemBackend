@@ -1,0 +1,11 @@
+[package]
+name = "populate"
+version = "0.1.0"
+authors = ["Mike Lubinets <lubinetsm@yandex.ru>"]
+
+[dependencies]
+hyper = "*"
+rustc-serialize = "*"
+cookie = "*"
+rand = "*"
+chrono = { version = "*", features = ["rustc-serialize"] } 
