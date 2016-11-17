@@ -215,8 +215,8 @@ BEGIN
       AND ClientLevel.BookingsAmount > (SELECT count(*) FROM Booking 
                                         WHERE Booking.ClientPersonID = client_id);
 
-    RETURN ((100 - discoint)/100) * 
-                    per_night.PerNight;
+    RETURN ((100 - discount)/100) * 
+                    per_night;
 END;
 $room_cost$
 LANGUAGE 'plpgsql';
@@ -231,8 +231,8 @@ BEGIN
 
     -- Calculate number of nights
     -- Set cost
-    new.FullCost := (SELECT room_cost(room_level, new.HotelID, new.ClientID)) * 
-                    EXTRACT(DAY FROM (new.ArrivalTime, new.DepartureTime)); 
+    new.FullCost := (SELECT room_cost(room_level, new.HotelID, new.ClientPersonID)); 
+                  -- * EXTRACT(DAY FROM (new.ArrivalTime, new.DepartureTime)); 
 
     RETURN new;
 END;

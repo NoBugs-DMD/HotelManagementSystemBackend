@@ -279,7 +279,7 @@ pub fn put_room(req: &mut Request) -> IronResult<Response> {
     let room = Room {
         HotelID: hotel_id,
         RoomNumber: new_room.RoomNumber,
-        RoomLevel: new_room.RoomLevelID,
+        RoomLevel: new_room.RoomLevel,
         PhotoSetID: new_room.PhotoSetID,
     };
 
@@ -325,7 +325,7 @@ pub fn update_room(req: &mut Request) -> IronResult<Response> {
     let mut update = Room::update_builder()
         .filter(format!("HotelID = {} and RoomNumber = {}", hotel_id, room_number));
 
-    if let Some(room_lvl_id) = upd_room.RoomLevelID.as_ref() {
+    if let Some(room_lvl_id) = upd_room.RoomLevel.as_ref() {
         values.push(room_lvl_id);
         update = update.set("RoomLevelID");
     }

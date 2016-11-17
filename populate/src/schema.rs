@@ -67,7 +67,7 @@ pub struct UpdateHotel {
 #[derive(Debug, RustcEncodable, RustcDecodable)]
 pub struct NewRoom {
     pub RoomNumber: i32,
-    pub RoomLevelID: i32,
+    pub RoomLevel: i32,
     pub PhotoSetID: Option<i32>
 }
 

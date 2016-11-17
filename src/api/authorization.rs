@@ -163,6 +163,8 @@ impl Authorizer {
             EmployedIn: employed_in,
         };
 
+        debug!("{:?}", roles);
+
         Ok(roles)
     }
 }
