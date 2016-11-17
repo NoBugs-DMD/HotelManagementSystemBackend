@@ -3,6 +3,8 @@ extern crate rustc_serialize;
 extern crate hyper;
 extern crate chrono;
 extern crate rand;
+extern crate threadpool;
+
 
 mod authorize;
 mod response;
@@ -19,7 +21,7 @@ fn main() {
         insert_city(city);
     }
 
-    let mut threads = Vec::new();
+    let pool = threadpool::ThreadPool::new(32);
 
     for i in 0..1000 {
         insert_hotel(&owner_token, schema::NewHotel {
@@ -28,24 +30,20 @@ fn main() {
             Description: random_str(),
             Stars: Some((rand::random::<i32>() % 5).abs()),
         });
-    }
-
-    for i in 0..1000 {
-        let i = i.clone();
-        let owner_token = owner_token.clone();
-
-        threads.push(std::thread::spawn(move || {
-            let owner_token = owner_token;
-            
-            for r in 0..1000 {
+        
+        for r in 0..1000 {
+            let owner_token = owner_token.clone();
+            pool.execute(move || {
                 insert_room(&owner_token, i+1, schema::NewRoom {
                     RoomNumber: r, 
                     RoomLevel: (rand::random::<i32>() % 4).abs(),
                     PhotoSetID: None
                 });
-            }
+            });
+        }
 
-            for b in 0..1000 {
+        for b in 0..1000 {
+            pool.execute(move || {
                 let client_token = authorize::signup_with(&random_str(), &random_str(), &random_str(), &random_str());
                 insert_booking(&client_token, schema::NewBooking {
                     ClientPersonID: None,
@@ -54,12 +52,8 @@ fn main() {
                     ArrivalTime: chrono::UTC::now().naive_local(),
                     DepartureTime: chrono::UTC::now().naive_local(),
                 });
-            }
-        }));
-    }
-
-    for t in threads {
-        t.join();
+            });
+        }
     }
 }
 

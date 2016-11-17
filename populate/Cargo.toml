@@ -9,3 +9,4 @@ rustc-serialize = "*"
 cookie = "*"
 rand = "*"
 chrono = { version = "*", features = ["rustc-serialize"] } 
+threadpool = "1.0"

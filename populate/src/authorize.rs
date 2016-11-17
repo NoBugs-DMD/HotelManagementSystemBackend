@@ -51,19 +51,12 @@ pub fn signup_with(login: &str, name: &str, email: &str, passhash: &str) -> Stri
         .send()
         .unwrap();
     
-    let resp_body = response_body(&mut res);
-    println!("body:    {:?}", resp_body);
-    println!("headers: {:?}", res.headers);
-
     let token = res.headers.get::<SetCookie>().unwrap()
         .iter()
         .filter(|cp| cp.name == "token")
         .last()
         .unwrap();
 
-    println!("token: {:?}", token.value);
-
-    let roles: Roles = json::decode(&resp_body).unwrap();
     assert_eq!(res.status, StatusCode::Ok);
 
     token.value.to_owned()
