@@ -5,7 +5,6 @@ extern crate chrono;
 extern crate rand;
 extern crate threadpool;
 
-
 mod authorize;
 mod response;
 mod schema;
@@ -17,15 +16,18 @@ use chrono::NaiveDateTime;
 fn main() {
     let (owner_token, _) = authorize::signin_with("owner", "0");
     
-    for city in &["Abakan", "Amsterdam", "Athens", "Antalia", "Rome", "Budapest", "Helsinki", "Oslo", "Stockholm", "Copenhagen", "Moscow", "Kazan", "Innopolis", "Samara", "Saint Petersburg", "Madrid", "Paris", "London", "New York", "Berlin", "Warsaw", "Vienna"] {
+    let cities = ["Abakan", "Amsterdam", "Athens", "Antalia", "Rome", "Budapest", "Helsinki", "Oslo", "Stockholm", "Copenhagen", "Moscow", "Kazan", "Innopolis", "Samara", "Saint Petersburg", "Madrid", "Paris", "London", "New York", "Berlin", "Warsaw", "Vienna"];
+    let cities_cnt = cities.len() as i32;
+
+    for city in &cities {
         insert_city(city);
     }
 
-    let pool = threadpool::ThreadPool::new(32);
+    let pool = threadpool::ThreadPool::new(16);
 
     for i in 0..1000 {
         insert_hotel(&owner_token, schema::NewHotel {
-            CityID: 0,
+            CityID: (rand::random::<i32>() % cities_cnt).abs() + 1,
             Name: random_str(),
             Description: random_str(),
             Stars: Some((rand::random::<i32>() % 5).abs()),
@@ -54,6 +56,8 @@ fn main() {
                 });
             });
         }
+
+	while pool.active_count() != 0 { std::thread::sleep_ms(100); }
     }
 }
 
