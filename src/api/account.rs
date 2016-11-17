@@ -70,6 +70,12 @@ pub fn get_account_info(req: &mut Request) -> IronResult<Response> {
         .last()
         .unwrap();
 
+    let info = AccountInfoData {
+        Info: info,
+        Roles: user.roles
+    };
+    
+
     Ok(info.as_response())
 }
 

@@ -2,6 +2,7 @@ use chrono::NaiveDateTime;
 use postgres::Connection;
 use ::db::schema::Person;
 use ::db::schema::Room;
+use ::db::schemaext::AccountInfo;
 use ::db::*;
 
 #[derive(Debug, RustcDecodable)]
@@ -27,6 +28,12 @@ pub struct Roles {
     pub Cleaner: bool,
     pub Receptionist: bool,
     pub EmployedIn: Option<Vec<i32>>,
+}
+
+#[derive(Debug, RustcEncodable, RustcDecodable)]
+pub struct AccountInfoData {
+    pub Info: AccountInfo,
+    pub Roles: Roles,
 }
 
 #[derive(Debug, RustcEncodable, RustcDecodable)]
