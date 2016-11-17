@@ -15,6 +15,9 @@ use ::proto::response::*;
 use ::db::schema::*;
 use ::db::*;
 
+use hyper::header::Headers;
+header! { (TokenHeader, "Token") => [String] }
+
 pub type Token = String;
 
 pub fn signin(req: &mut Request) -> IronResult<Response> {
@@ -42,12 +45,8 @@ fn respond_with_roles_and_token(token: String) -> IronResult<Response> {
     let roles = Authorizer::get_roles(&get_db_connection(), id)?;
 
     let mut response: Response = roles.as_response();
-    let mut cookie = CookiePair::new("token".to_string(), token.to_owned());
+    response.headers.set(TokenHeader(token));
 
-    // Nulling the path to tell browser to pass cookie for whole domain
-    cookie.path = Some(String::new());
-
-    response.set_cookie(cookie);
     Ok(response)
 }
 
@@ -94,12 +93,12 @@ impl Authorizer {
     }
 
     pub fn authorize_request(conn: &Connection, req: &mut Request) -> ApiResult<Authorized> {
-        let token_cookie = match req.get_cookie("token") {
+        let token = match req.headers.get::<TokenHeader>() {
             Some(tc) => tc,
             None => return Err(box NotAuthorizedError::from_str("No token found in request")),
         };
 
-        let id = Self::get_id(&token_cookie.value)?;
+        let id = Self::get_id(&token)?;
         Ok(Authorized {
             id: id,
             roles: Self::get_roles(conn, id)?,

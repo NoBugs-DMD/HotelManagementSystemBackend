@@ -8,11 +8,11 @@
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate router;
 #[macro_use] extern crate log;
+#[macro_use] extern crate hyper;
 extern crate env_logger;
 extern crate postgres;
 extern crate r2d2;
 extern crate r2d2_postgres;
-extern crate hyper;
 extern crate unicase;
 extern crate params;
 extern crate iron;
@@ -107,9 +107,10 @@ use hyper::method::Method;
 use unicase::UniCase;
 impl AfterMiddleware for CorsMiddleware {
     fn after(&self, req: &mut Request, mut res: Response) -> IronResult<Response> {
-        res.headers.set(hyper::header::AccessControlAllowOrigin::Any);
-	res.headers.set(hyper::header::AccessControlAllowMethods(vec![Method::Get, Method::Post, Method::Put, Method::Delete]));
-	res.headers.set(hyper::header::AccessControlAllowHeaders(vec![
+        res.headers.set(hyper::header::AccessControlAllowOrigin::Value("null".to_owned()));
+        res.headers.set(hyper::header::AccessControlAllowCredentials);
+	    res.headers.set(hyper::header::AccessControlAllowMethods(vec![Method::Get, Method::Post, Method::Put, Method::Delete]));
+	    res.headers.set(hyper::header::AccessControlAllowHeaders(vec![
 		UniCase("Origin".to_owned()),
 		UniCase("Content-Type".to_owned()),
 		UniCase("Accept".to_owned()),
